@@ -25,7 +25,8 @@ export default function ChefDashboardLayout() {
   const [isLive, setIsLive] = useState(false);
   const navigate = useNavigate();
 
-  return (
+  return (<>  
+  
     <div
       dir="rtl"
       className="flex min-h-screen bg-[#FFF9F6] text-gray-800 font-sans"
@@ -93,10 +94,13 @@ export default function ChefDashboardLayout() {
 
         {/* الأسفل: بث مباشر والروابط الثابتة */}
         <div className="space-y-4 pt-6 border-t border-gray-100">
-          <button className="w-full bg-[#B34510] hover:bg-[#A03E0F] text-white py-3 px-4 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-colors shadow-sm">
+          <Link
+            to="/"
+            className="w-full bg-[#B34510] hover:bg-[#A03E0F] text-white py-3 px-4 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-colors shadow-sm"
+          >
             <Radio className="w-4 h-4" />
-            <Link to="/">رجوع للصفحة الرئيسية</Link>
-          </button>
+            <span>رجوع للصفحة الرئيسية</span>
+          </Link>
 
           <div className="space-y-1 text-xs font-semibold text-gray-500">
             <button className="w-full flex items-center gap-2 p-2 rounded-lg hover:bg-gray-50 hover:text-gray-900">
@@ -119,5 +123,6 @@ export default function ChefDashboardLayout() {
         <Outlet />
       </main>
     </div>
+  </>
   );
 }
