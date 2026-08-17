@@ -1,6 +1,8 @@
 import { lazy, Suspense } from 'react';
 import { createBrowserRouter } from 'react-router-dom';
 import HomeFeed from '../../features/auth/pages/HomePage';
+import { ProtectedRoute } from "./ProtectedRoute"; 
+import { GuestRoute } from './GuestRoute';
 
 // Lazy loading للصفحة من مجلد الـ features
 const App = lazy(() => import('../../App'));
@@ -35,6 +37,29 @@ export const router = createBrowserRouter([
       </Suspense>
     ),
     children: [
+      {
+        element: <GuestRoute />,
+        children: [
+          // صفحات متاحة فقط للزوار غير المسجلين
+          {
+            path: "/login",
+            element: (
+              <Suspense fallback={<div>جاري التحميل...</div>}>
+                <LoginPage />
+              </Suspense>
+            ),
+          },
+          {
+            path: "/register",
+            element: (
+              <Suspense fallback={<div>جاري التحميل...</div>}>
+                <RegistrationPage />
+              </Suspense>
+            ),
+          },
+        ],
+      },
+
       {
         index: true,
         element: (
@@ -118,53 +143,60 @@ export const router = createBrowserRouter([
     ],
   },
 
+  // المسارات المحمية (لا يمكن دخولها بدون تسجيل دخول)
+
   {
-    path: "/chef",
-    element: (
-      <Suspense fallback={<div>جاري التحميل...</div>}>
-        <ChefDashboardLayout />
-      </Suspense>
-    ),
+    element: <ProtectedRoute />,
     children: [
       {
-        index: true,
+        path: "/chef",
         element: (
           <Suspense fallback={<div>جاري التحميل...</div>}>
-            <DashboardOverview />
+            <ChefDashboardLayout />
           </Suspense>
         ),
-      },
-      {
-        path: "/chef/orders",
-        element: (
-          <Suspense fallback={<div>جاري التحميل...</div>}>
-            <Order />
-          </Suspense>
-        ),
-      },
-      {
-        path: "/chef/menu",
-        element: (
-          <Suspense fallback={<div>جاري التحميل...</div>}>
-            <MenuManagement />
-          </Suspense>
-        ),
-      },
-      {
-        path: "/chef/settings",
-        element: (
-          <Suspense fallback={<div>جاري التحميل...</div>}>
-            <KitchenSettings />
-          </Suspense>
-        ),
-      },
-      {
-        path: "/chef/analytics",
-        element: (
-          <Suspense fallback={<div>جاري التحميل...</div>}>
-            <SalesAnalytics />
-          </Suspense>
-        ),
+        children: [
+          {
+            index: true,
+            element: (
+              <Suspense fallback={<div>جاري التحميل...</div>}>
+                <DashboardOverview />
+              </Suspense>
+            ),
+          },
+          {
+            path: "/chef/orders",
+            element: (
+              <Suspense fallback={<div>جاري التحميل...</div>}>
+                <Order />
+              </Suspense>
+            ),
+          },
+          {
+            path: "/chef/menu",
+            element: (
+              <Suspense fallback={<div>جاري التحميل...</div>}>
+                <MenuManagement />
+              </Suspense>
+            ),
+          },
+          {
+            path: "/chef/settings",
+            element: (
+              <Suspense fallback={<div>جاري التحميل...</div>}>
+                <KitchenSettings />
+              </Suspense>
+            ),
+          },
+          {
+            path: "/chef/analytics",
+            element: (
+              <Suspense fallback={<div>جاري التحميل...</div>}>
+                <SalesAnalytics />
+              </Suspense>
+            ),
+          },
+        ],
       },
     ],
   },

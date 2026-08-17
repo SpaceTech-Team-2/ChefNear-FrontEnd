@@ -12,6 +12,7 @@ import {
   LogOut,
   Power,
 } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
 
 const navItems = [
   { path: "/chef", label: "لوحة التحكم", icon: LayoutDashboard, end: true },
@@ -22,6 +23,10 @@ const navItems = [
 ];
 
 export default function ChefDashboardLayout() {
+  const queryClient = useQueryClient();
+      console.log("User data:", queryClient.getQueryData(["user"]));
+
+
   const [isLive, setIsLive] = useState(false);
   const navigate = useNavigate();
 
