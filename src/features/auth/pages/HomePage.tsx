@@ -1,4 +1,5 @@
 import { Heart, Star, ArrowLeft, Utensils } from "lucide-react";
+import { Link } from "react-router-dom";
 
 interface Dish {
   id: number;
@@ -202,69 +203,71 @@ export default function HomeFeed() {
         {/* Dish Cards Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {dishes.map((dish) => (
-            <div
-              key={dish.id}
-              className="bg-white rounded-2xl overflow-hidden border border-gray-100 shadow-sm hover:shadow-md transition-shadow flex flex-col justify-between"
-            >
-              <div>
-                {/* Image */}
-                <div className="relative h-44 w-full">
-                  <img
-                    src={dish.image}
-                    alt={dish.title}
-                    className="w-full h-full object-cover"
-                  />
-                  <button className="absolute top-3 left-3 bg-white/80 hover:bg-white backdrop-blur-sm p-1.5 rounded-full text-gray-700 transition-colors shadow-sm">
-                    <Heart className="w-4 h-4" />
-                  </button>
+            <Link to={"/DishDetailsModal"}>
+              <div
+                key={dish.id}
+                className="bg-white rounded-2xl overflow-hidden border border-gray-100 shadow-sm hover:shadow-md transition-shadow flex flex-col justify-between"
+              >
+                <div>
+                  {/* Image */}
+                  <div className="relative h-44 w-full">
+                    <img
+                      src={dish.image}
+                      alt={dish.title}
+                      className="w-full h-full object-cover"
+                    />
+                    <button className="absolute top-3 left-3 bg-white/80 hover:bg-white backdrop-blur-sm p-1.5 rounded-full text-gray-700 transition-colors shadow-sm">
+                      <Heart className="w-4 h-4" />
+                    </button>
 
-                  {dish.badge && (
-                    <span
-                      className={`absolute top-3 right-3 text-[10px] font-bold px-2.5 py-1 rounded-md shadow-sm ${
-                        dish.badgeType === "green"
-                          ? "bg-emerald-700 text-white"
-                          : "bg-amber-200 text-amber-950"
-                      }`}
-                    >
-                      {dish.badge}
-                    </span>
-                  )}
-                </div>
-
-                {/* Content */}
-                <div className="p-4 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <h3 className="font-bold text-gray-800 text-sm md:text-base">
-                      {dish.title}
-                    </h3>
-                    <span className="text-amber-800 font-extrabold text-sm">
-                      {dish.price}
-                    </span>
+                    {dish.badge && (
+                      <span
+                        className={`absolute top-3 right-3 text-[10px] font-bold px-2.5 py-1 rounded-md shadow-sm ${
+                          dish.badgeType === "green"
+                            ? "bg-emerald-700 text-white"
+                            : "bg-amber-200 text-amber-950"
+                        }`}
+                      >
+                        {dish.badge}
+                      </span>
+                    )}
                   </div>
 
-                  <p className="text-xs text-gray-500 line-clamp-2 leading-relaxed">
-                    {dish.description}
-                  </p>
+                  {/* Content */}
+                  <div className="p-4 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <h3 className="font-bold text-gray-800 text-sm md:text-base">
+                        {dish.title}
+                      </h3>
+                      <span className="text-amber-800 font-extrabold text-sm">
+                        {dish.price}
+                      </span>
+                    </div>
+
+                    <p className="text-xs text-gray-500 line-clamp-2 leading-relaxed">
+                      {dish.description}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Card Footer */}
+                <div className="p-4 pt-0 flex items-center justify-between border-t border-gray-50 mt-2 text-xs">
+                  <div className="flex items-center gap-1.5 text-gray-600 font-medium">
+                    <img
+                      src={dish.chefAvatar}
+                      alt={dish.chefName}
+                      className="w-5 h-5 rounded-full object-cover"
+                    />
+                    <span>{dish.chefName}</span>
+                  </div>
+
+                  <div className="flex items-center gap-1 text-gray-700 font-bold">
+                    <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
+                    <span>{dish.rating}</span>
+                  </div>
                 </div>
               </div>
-
-              {/* Card Footer */}
-              <div className="p-4 pt-0 flex items-center justify-between border-t border-gray-50 mt-2 text-xs">
-                <div className="flex items-center gap-1.5 text-gray-600 font-medium">
-                  <img
-                    src={dish.chefAvatar}
-                    alt={dish.chefName}
-                    className="w-5 h-5 rounded-full object-cover"
-                  />
-                  <span>{dish.chefName}</span>
-                </div>
-
-                <div className="flex items-center gap-1 text-gray-700 font-bold">
-                  <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
-                  <span>{dish.rating}</span>
-                </div>
-              </div>
-            </div>
+            </Link>
           ))}
         </div>
       </div>

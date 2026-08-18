@@ -3,13 +3,18 @@ import { createBrowserRouter } from 'react-router-dom';
 import HomeFeed from '../../features/auth/pages/HomePage';
 import { ProtectedRoute } from "./ProtectedRoute"; 
 import { GuestRoute } from './GuestRoute';
+import {AdminRoute} from './auth/AdminRoute'
+import { AdminLayout } from '../../features/auth/pages/admin/AdminLayout';
 
 // Lazy loading للصفحة من مجلد الـ features
 const App = lazy(() => import('../../App'));
 const LoginPage = lazy(() => import('../../features/auth/pages/LoginPage'));
 const Specialties = lazy(() => import('../../features/auth/pages/Specialties'));
 const HowItWorks = lazy(() => import('../../features/auth/pages/HowItWorks'));
+const HelpCenter = lazy(() => import('../../features/auth/pages/HelpCenter'));
+const ReportIssue = lazy(() => import("../../features/auth/pages/ReportIssue"));
 const RegistrationPage = lazy(() => import('../../features/auth/pages/RegistrationPage'));
+
 const ChefDashboardLayout = lazy(() => import('../../features/chef-dashboard/ChefDashboardLayout'));
 const DashboardOverview = lazy(() => import('../../features/chef-dashboard/pages/DashboardOverview'));
 const Order = lazy(() => import("../../features/chef-dashboard/pages/orders"));
@@ -77,18 +82,18 @@ export const router = createBrowserRouter([
         ),
       },
       {
-        path: "/login",
+        path: "/HelpCenter",
         element: (
           <Suspense fallback={<div>جاري التحميل...</div>}>
-            <LoginPage />
+            <HelpCenter />
           </Suspense>
         ),
       },
       {
-        path: "/register",
+        path: "/report-issue",
         element: (
           <Suspense fallback={<div>جاري التحميل...</div>}>
-            <RegistrationPage />
+            <ReportIssue />
           </Suspense>
         ),
       },
@@ -137,6 +142,22 @@ export const router = createBrowserRouter([
         element: (
           <Suspense fallback={<div>جاري التحميل...</div>}>
             <div>الصفحة غير موجودة</div>
+          </Suspense>
+        ),
+      },
+    ],
+  },
+
+  // المسارات المحمية ( admin لا يمكن دخولها بدون تسجيل دخول )
+
+  {
+    element: <AdminRoute />,
+    children: [
+      {
+        path: "/adminDashboard",
+        element: (
+          <Suspense fallback={<div>جاري التحميل...</div>}>
+            <AdminLayout />
           </Suspense>
         ),
       },
