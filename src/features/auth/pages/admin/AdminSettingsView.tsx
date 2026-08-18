@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Settings, Save, ShieldAlert, Truck, Sliders } from "lucide-react";
+import { Settings, Save, ShieldAlert, Truck } from "lucide-react";
 
 export const AdminSettingsView: React.FC = () => {
   const [maintenanceMode, setMaintenanceMode] = useState<boolean>(false);

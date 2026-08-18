@@ -1,11 +1,8 @@
 import React, { useState } from "react";
 import {
   AlertTriangle,
-  MessageCircle,
   CheckCircle,
   XCircle,
-  Clock,
-  User,
 } from "lucide-react";
 
 interface Dispute {

@@ -1,6 +1,5 @@
 import React from "react";
 import {
-  UserCheck,
   UserX,
   Search,
   MessageCircle,
