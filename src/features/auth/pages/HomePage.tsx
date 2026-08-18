@@ -1,85 +1,60 @@
+import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Heart, Star, ArrowLeft, Utensils } from "lucide-react";
+import { getCategories, getDishes } from "../../../services/api";
 
-interface Dish {
-  id: number;
-  title: string;
+interface Category {
+  id: string;
+  name: string;
   description: string;
-  price: number;
-  rating: number;
-  chefName: string;
-  chefAvatar: string;
-  image: string;
-  badge?: string;
-  badgeType?: "green" | "yellow";
 }
 
-const dishes: Dish[] = [
-  {
-    id: 1,
-    title: "سلطة فتوش طازجة",
-    description: "خضار مقرمشة مع الخبز المحمص وتتبيلة دبس الرمان المميزة.",
-    price: 28,
-    rating: 4.6,
-    chefName: "الشيف سارة",
-    chefAvatar:
-      "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=100&q=80",
-    image:
-      "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?auto=format&fit=crop&w=600&q=80",
-    badge: "خيار صحي",
-    badgeType: "green",
-  },
-  {
-    id: 2,
-    title: "تشكيلة فطائر شامية",
-    description:
-      "عجينة هشّة وطرية بحشوات السبانخ، الجبنة العكاوى، واللحم المفروم.",
-    price: 35,
-    rating: 4.7,
-    chefName: "مخبز الحارة",
-    chefAvatar:
-      "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=100&q=80",
-    image:
-      "https://images.unsplash.com/photo-1626777552726-4a6b54c97e46?auto=format&fit=crop&w=600&q=80",
-  },
-  {
-    id: 3,
-    title: "مجبوس دجاج إماراتي",
-    description: "غني بنكهات الهيل والزعفران مع الدجاج الطازج والمكسرات.",
-    price: 65,
-    rating: 4.9,
-    chefName: "مطبخ أم علي",
-    chefAvatar:
-      "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=100&q=80",
-    image:
-      "https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?auto=format&fit=crop&w=600&q=80",
-    badge: "الأكثر مبيعاً",
-    badgeType: "yellow",
-  },
-  {
-    id: 4,
-    title: "حمص بالطحينة بلدي",
-    description:
-      "محضر على الطريقة التقليدية بزيت الزيتون الصافي والصنوبر المحمص.",
-    price: 45,
-    rating: 4.8,
-    chefName: "الشيف أحمد",
-    chefAvatar:
-      "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=100&q=80",
-    image:
-      "https://images.unsplash.com/photo-1577906096429-f73c2c312435?auto=format&fit=crop&w=600&q=80",
-  },
-];
+interface Dish {
+  id: string;
+  name: string;
+  description: string;
+  price: number;
+  primaryImageUrl: string;
+  chefDisplayName: string;
+  distanceKm?: number;
+}
 
-const categories = [
-  "مأكولات بحرية",
-  "صحي ونباتي",
-  "مخبوزات",
-  "مناسبات وولائم",
-  "حلويات",
-  "مطبخ شامي",
-];
+interface ApiEnvelope<T> {
+  data: T;
+  isSuccess: boolean;
+  message: string;
+}
 
 export default function HomeFeed() {
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(
+    null
+  );
+
+  const {
+    data: categoriesRes,
+    isLoading: categoriesLoading,
+  } = useQuery<ApiEnvelope<Category[]>>({
+    queryKey: ["categories"],
+    queryFn: getCategories,
+  });
+
+  const {
+    data: dishesRes,
+    isLoading: dishesLoading,
+    isError: dishesError,
+  } = useQuery<ApiEnvelope<Dish[]>>({
+    queryKey: ["dishes", selectedCategoryId],
+    queryFn: () =>
+      getDishes({
+        CategoryId: selectedCategoryId ?? undefined,
+        PageNumber: 1,
+        PageSize: 8,
+      }),
+  });
+
+  const categories = categoriesRes?.data ?? [];
+  const dishes = dishesRes?.data ?? [];
+
   return (
     <div
       dir="rtl"
@@ -169,12 +144,34 @@ export default function HomeFeed() {
 
       {/* Categories Filter Horizontal Bar */}
       <div className="flex items-center gap-3 overflow-x-auto pb-2 scrollbar-none justify-start md:justify-center">
-        {categories.map((category, idx) => (
+        <button
+          onClick={() => setSelectedCategoryId(null)}
+          className={`whitespace-nowrap px-5 py-2 rounded-full border text-xs md:text-sm font-medium transition-colors ${
+            selectedCategoryId === null
+              ? "bg-amber-800 border-amber-800 text-white"
+              : "border-rose-100 bg-rose-50/40 hover:bg-rose-100/60 text-gray-700"
+          }`}
+        >
+          الكل
+        </button>
+        {categoriesLoading &&
+          Array.from({ length: 5 }).map((_, idx) => (
+            <div
+              key={idx}
+              className="h-9 w-24 rounded-full bg-rose-50 animate-pulse shrink-0"
+            />
+          ))}
+        {categories.map((category) => (
           <button
-            key={idx}
-            className="whitespace-nowrap px-5 py-2 rounded-full border border-rose-100 bg-rose-50/40 hover:bg-rose-100/60 text-gray-700 text-xs md:text-sm font-medium transition-colors"
+            key={category.id}
+            onClick={() => setSelectedCategoryId(category.id)}
+            className={`whitespace-nowrap px-5 py-2 rounded-full border text-xs md:text-sm font-medium transition-colors ${
+              selectedCategoryId === category.id
+                ? "bg-amber-800 border-amber-800 text-white"
+                : "border-rose-100 bg-rose-50/40 hover:bg-rose-100/60 text-gray-700"
+            }`}
           >
-            {category}
+            {category.name}
           </button>
         ))}
       </div>
@@ -200,73 +197,81 @@ export default function HomeFeed() {
         </div>
 
         {/* Dish Cards Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {dishes.map((dish) => (
-            <div
-              key={dish.id}
-              className="bg-white rounded-2xl overflow-hidden border border-gray-100 shadow-sm hover:shadow-md transition-shadow flex flex-col justify-between"
-            >
-              <div>
-                {/* Image */}
-                <div className="relative h-44 w-full">
-                  <img
-                    src={dish.image}
-                    alt={dish.title}
-                    className="w-full h-full object-cover"
-                  />
-                  <button className="absolute top-3 left-3 bg-white/80 hover:bg-white backdrop-blur-sm p-1.5 rounded-full text-gray-700 transition-colors shadow-sm">
-                    <Heart className="w-4 h-4" />
-                  </button>
+        {dishesError && (
+          <div className="text-center text-sm text-red-600 bg-red-50 border border-red-100 rounded-xl p-4">
+            تعذر تحميل الأطباق حالياً. حاول تحديث الصفحة.
+          </div>
+        )}
 
-                  {dish.badge && (
-                    <span
-                      className={`absolute top-3 right-3 text-[10px] font-bold px-2.5 py-1 rounded-md shadow-sm ${
-                        dish.badgeType === "green"
-                          ? "bg-emerald-700 text-white"
-                          : "bg-amber-200 text-amber-950"
-                      }`}
-                    >
-                      {dish.badge}
-                    </span>
-                  )}
+        {!dishesError && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {dishesLoading &&
+              Array.from({ length: 4 }).map((_, idx) => (
+                <div
+                  key={idx}
+                  className="bg-white rounded-2xl overflow-hidden border border-gray-100 shadow-sm animate-pulse"
+                >
+                  <div className="h-44 w-full bg-gray-100" />
+                  <div className="p-4 space-y-3">
+                    <div className="h-4 w-2/3 bg-gray-100 rounded" />
+                    <div className="h-3 w-full bg-gray-100 rounded" />
+                    <div className="h-3 w-1/2 bg-gray-100 rounded" />
+                  </div>
                 </div>
+              ))}
 
-                {/* Content */}
-                <div className="p-4 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <h3 className="font-bold text-gray-800 text-sm md:text-base">
-                      {dish.title}
-                    </h3>
-                    <span className="text-amber-800 font-extrabold text-sm">
-                      {dish.price}
-                    </span>
+            {!dishesLoading && dishes.length === 0 && (
+              <p className="col-span-full text-center text-sm text-gray-500 py-8">
+                لا توجد أطباق متاحة في هذا التصنيف حالياً.
+              </p>
+            )}
+
+            {!dishesLoading &&
+              dishes.map((dish) => (
+                <div
+                  key={dish.id}
+                  className="bg-white rounded-2xl overflow-hidden border border-gray-100 shadow-sm hover:shadow-md transition-shadow flex flex-col justify-between"
+                >
+                  <div>
+                    {/* Image */}
+                    <div className="relative h-44 w-full">
+                      <img
+                        src={dish.primaryImageUrl}
+                        alt={dish.name}
+                        className="w-full h-full object-cover"
+                      />
+                      <button className="absolute top-3 left-3 bg-white/80 hover:bg-white backdrop-blur-sm p-1.5 rounded-full text-gray-700 transition-colors shadow-sm">
+                        <Heart className="w-4 h-4" />
+                      </button>
+                    </div>
+
+                    {/* Content */}
+                    <div className="p-4 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <h3 className="font-bold text-gray-800 text-sm md:text-base">
+                          {dish.name}
+                        </h3>
+                        <span className="text-amber-800 font-extrabold text-sm">
+                          {dish.price}
+                        </span>
+                      </div>
+
+                      <p className="text-xs text-gray-500 line-clamp-2 leading-relaxed">
+                        {dish.description}
+                      </p>
+                    </div>
                   </div>
 
-                  <p className="text-xs text-gray-500 line-clamp-2 leading-relaxed">
-                    {dish.description}
-                  </p>
+                  {/* Card Footer */}
+                  <div className="p-4 pt-0 flex items-center justify-between border-t border-gray-50 mt-2 text-xs">
+                    <div className="flex items-center gap-1.5 text-gray-600 font-medium">
+                      <span>{dish.chefDisplayName}</span>
+                    </div>
+                  </div>
                 </div>
-              </div>
-
-              {/* Card Footer */}
-              <div className="p-4 pt-0 flex items-center justify-between border-t border-gray-50 mt-2 text-xs">
-                <div className="flex items-center gap-1.5 text-gray-600 font-medium">
-                  <img
-                    src={dish.chefAvatar}
-                    alt={dish.chefName}
-                    className="w-5 h-5 rounded-full object-cover"
-                  />
-                  <span>{dish.chefName}</span>
-                </div>
-
-                <div className="flex items-center gap-1 text-gray-700 font-bold">
-                  <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
-                  <span>{dish.rating}</span>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
+              ))}
+          </div>
+        )}
       </div>
     </div>
   );

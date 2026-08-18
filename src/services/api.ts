@@ -31,5 +31,23 @@ export const loginUser = async (userData: any) => {
 };
 
 export const getCategories = async () => {
-  return fetchingApi("get", "Categories");
+  return fetchingApi("get", "v1/Categories");
+};
+
+export interface GetDishesParams {
+  Search?: string;
+  CategoryId?: string;
+  MaxPrice?: number;
+  PageNumber?: number;
+  PageSize?: number;
+}
+
+export const getDishes = async (params: GetDishesParams = {}) => {
+  const query = new URLSearchParams(
+    Object.entries(params)
+      .filter(([, value]) => value !== undefined && value !== null && value !== "")
+      .map(([key, value]) => [key, String(value)])
+  ).toString();
+
+  return fetchingApi("get", `v1/Dishes${query ? `?${query}` : ""}`);
 };
