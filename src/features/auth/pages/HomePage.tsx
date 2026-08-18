@@ -1,7 +1,9 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Heart, Star, ArrowLeft, Utensils } from "lucide-react";
+import { Heart, Star, ArrowLeft, Utensils, ShoppingCart } from "lucide-react";
+import { Link } from "react-router-dom";
 import { getCategories, getDishes } from "../../../services/api";
+import { useCart } from "../../../services/CartContext";
 
 interface Category {
   id: string;
@@ -29,6 +31,7 @@ export default function HomeFeed() {
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(
     null
   );
+  const { addItem } = useCart();
 
   const {
     data: categoriesRes,
@@ -228,47 +231,63 @@ export default function HomeFeed() {
 
             {!dishesLoading &&
               dishes.map((dish) => (
-                <div
-                  key={dish.id}
-                  className="bg-white rounded-2xl overflow-hidden border border-gray-100 shadow-sm hover:shadow-md transition-shadow flex flex-col justify-between"
-                >
-                  <div>
-                    {/* Image */}
-                    <div className="relative h-44 w-full">
-                      <img
-                        src={dish.primaryImageUrl}
-                        alt={dish.name}
-                        className="w-full h-full object-cover"
-                      />
-                      <button className="absolute top-3 left-3 bg-white/80 hover:bg-white backdrop-blur-sm p-1.5 rounded-full text-gray-700 transition-colors shadow-sm">
-                        <Heart className="w-4 h-4" />
-                      </button>
-                    </div>
-
-                    {/* Content */}
-                    <div className="p-4 space-y-2">
-                      <div className="flex items-center justify-between">
-                        <h3 className="font-bold text-gray-800 text-sm md:text-base">
-                          {dish.name}
-                        </h3>
-                        <span className="text-amber-800 font-extrabold text-sm">
-                          {dish.price}
-                        </span>
+                <Link key={dish.id} to="/DishDetailsModal" className="contents">
+                  <div className="bg-white rounded-2xl overflow-hidden border border-gray-100 shadow-sm hover:shadow-md transition-shadow flex flex-col justify-between">
+                    <div>
+                      {/* Image */}
+                      <div className="relative h-44 w-full">
+                        <img
+                          src={dish.primaryImageUrl}
+                          alt={dish.name}
+                          className="w-full h-full object-cover"
+                        />
+                        <button className="absolute top-3 left-3 bg-white/80 hover:bg-white backdrop-blur-sm p-1.5 rounded-full text-gray-700 transition-colors shadow-sm">
+                          <Heart className="w-4 h-4" />
+                        </button>
                       </div>
 
-                      <p className="text-xs text-gray-500 line-clamp-2 leading-relaxed">
-                        {dish.description}
-                      </p>
-                    </div>
-                  </div>
+                      {/* Content */}
+                      <div className="p-4 space-y-2">
+                        <div className="flex items-center justify-between">
+                          <h3 className="font-bold text-gray-800 text-sm md:text-base">
+                            {dish.name}
+                          </h3>
+                          <span className="text-amber-800 font-extrabold text-sm">
+                            {dish.price}
+                          </span>
+                        </div>
 
-                  {/* Card Footer */}
-                  <div className="p-4 pt-0 flex items-center justify-between border-t border-gray-50 mt-2 text-xs">
-                    <div className="flex items-center gap-1.5 text-gray-600 font-medium">
-                      <span>{dish.chefDisplayName}</span>
+                        <p className="text-xs text-gray-500 line-clamp-2 leading-relaxed">
+                          {dish.description}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Card Footer */}
+                    <div className="p-4 pt-0 flex items-center justify-between border-t border-gray-50 mt-2 text-xs">
+                      <div className="flex items-center gap-1.5 text-gray-600 font-medium">
+                        <span>{dish.chefDisplayName}</span>
+                      </div>
+                      <button
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          addItem({
+                            dishId: dish.id,
+                            name: dish.name,
+                            price: dish.price,
+                            image: dish.primaryImageUrl,
+                            chefDisplayName: dish.chefDisplayName,
+                          });
+                        }}
+                        className="flex items-center gap-1 bg-amber-800 hover:bg-amber-900 text-white text-[11px] font-bold px-2.5 py-1.5 rounded-lg transition-colors"
+                      >
+                        <ShoppingCart className="w-3.5 h-3.5" />
+                        <span>أضف</span>
+                      </button>
                     </div>
                   </div>
-                </div>
+                </Link>
               ))}
           </div>
         )}

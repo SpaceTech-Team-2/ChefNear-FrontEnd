@@ -11,6 +11,7 @@ import {
   ShoppingCart,
   Image as ImageIcon,
 } from 'lucide-react';
+import { Reviews } from '../auth/pages/Reviews';
 
 export default function DishDetailsModal() {
   const [quantity, setQuantity] = useState(1);
@@ -228,8 +229,9 @@ export default function DishDetailsModal() {
             </div>
 
           </div>
-
         </div>
+        <hr />
+                <Reviews/>
       </div>
     </div>
   );

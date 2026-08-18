@@ -11,7 +11,10 @@ import {
 } from "@headlessui/react";
 import { Bars3Icon, XMarkIcon } from "@heroicons/react/24/outline";
 import { Search, ShoppingCart, Heart, Bell, ChevronDown } from "lucide-react"; // استيراد الأيقونات الجديدة
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
+import { useCart } from "../../services/CartContext";
+import { getMyProfile } from "../../services/api";
 
 const navLinks = [
   { name: "اكتشف الطهاة", href: "/chefs", active: true },
@@ -22,16 +25,24 @@ const navLinks = [
 
 export default function Navbar() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const navigate = useNavigate();
+  const { totalCount } = useCart();
 
-  // حالة تسجيل الدخول (قم بتغيير هذا بناءً على منطق المصادقة لديك)
-  // false = يعرض أزرار تسجيل الدخول، true = يعرض صورة الملف الشخصي والأيقونات
-  const [isLoggedIn, setIsLoggedIn] = useState(true);
+  // حالة تسجيل الدخول الحقيقية (بناءً على وجود توكين فعلي، مش قيمة وهمية)
+  const isLoggedIn = Boolean(localStorage.getItem("token"));
 
-  // بيانات المستخدم الوهمية
-  const user = {
-    avatarUrl:
-      "https://images.unsplash.com/photo-1581382575275-97901c2635b7?&w=100&q=80&auto=format&fit=crop", // صورة شيف من Unsplash
-    name: "الشيف أحمد",
+  const { data: profileRes } = useQuery({
+    queryKey: ["my-profile"],
+    queryFn: getMyProfile,
+    enabled: isLoggedIn,
+  });
+  const profile = profileRes?.data;
+  const displayName = profile?.displayName || profile?.firstName || "حسابي";
+
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    setMobileMenuOpen(false);
+    navigate("/login");
   };
 
   return (
@@ -104,6 +115,19 @@ export default function Navbar() {
 
         {/* القسم الأيسر: الإجراءات/الملف الشخصي */}
         <div className="hidden lg:flex lg:flex-1 lg:justify-end items-center gap-5">
+          {/* سلة التسوق متاحة للزوار والمسجلين، تسجيل الدخول مطلوب بس وقت إتمام الطلب */}
+          <Link
+            to="/cart"
+            className="relative p-1.5 hover:bg-[#FFEAE3] rounded-full transition-colors text-[#5F2108]"
+          >
+            <ShoppingCart className="size-6 stroke-[1.5]" />
+            {totalCount > 0 && (
+              <span className="absolute -top-1 -left-1 flex items-center justify-center size-5 bg-[#A03E0F] text-white text-[11px] font-bold rounded-full">
+                {totalCount}
+              </span>
+            )}
+          </Link>
+
           {isLoggedIn ? (
             // حالة تسجيل الدخول: عرض الأيقونات وصورة الملف الشخصي
             <>
@@ -115,22 +139,14 @@ export default function Navbar() {
                 <button className="p-1.5 hover:bg-[#FFEAE3] rounded-full transition-colors">
                   <Heart className="size-6 stroke-[1.5]" />
                 </button>
-                <button className="relative p-1.5 hover:bg-[#FFEAE3] rounded-full transition-colors">
-                  <ShoppingCart className="size-6 stroke-[1.5]" />
-                  <span className="absolute -top-1 -left-1 flex items-center justify-center size-5 bg-[#A03E0F] text-white text-[11px] font-bold rounded-full">
-                    3
-                  </span>
-                </button>
               </div>
 
               {/* قائمة الملف الشخصي المنسدلة */}
               <Popover className="relative">
                 <PopoverButton className="flex items-center gap-2 outline-none">
-                  <img
-                    src={user.avatarUrl}
-                    alt={user.name}
-                    className="size-11 rounded-full object-cover border-2 border-[#EACEC5] p-0.5"
-                  />
+                  <span className="size-11 rounded-full bg-[#B34510] text-white flex items-center justify-center font-bold border-2 border-[#EACEC5]">
+                    {displayName.trim().slice(0, 1)}
+                  </span>
                   <ChevronDown className="size-4 text-[#A87C69]" />
                 </PopoverButton>
                 <PopoverPanel className="absolute left-0 z-10 mt-3 w-48 rounded-xl bg-white p-2 shadow-lg ring-1 ring-black/5 text-sm">
@@ -147,7 +163,7 @@ export default function Navbar() {
                     طلباتي
                   </Link>
                   <button
-                    onClick={() => setIsLoggedIn(false)}
+                    onClick={handleLogout}
                     className="block w-full text-right px-4 py-2 hover:bg-gray-50 rounded-lg text-red-600"
                   >
                     تسجيل الخروج
@@ -234,24 +250,37 @@ export default function Navbar() {
               {/* قسم الحساب في الموبايل */}
               <div className="py-6">
                 {isLoggedIn ? (
-                  <div className="flex items-center gap-4 py-2">
-                    <img
-                      src={user.avatarUrl}
-                      alt={user.name}
-                      className="size-14 rounded-full object-cover border-2 border-[#EACEC5]"
-                    />
-                    <div>
-                      <div className="font-bold text-[#5F2108]">
-                        {user.name}
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-4 py-2">
+                      <span className="size-14 rounded-full bg-[#B34510] text-white flex items-center justify-center font-bold border-2 border-[#EACEC5] text-lg">
+                        {displayName.trim().slice(0, 1)}
+                      </span>
+                      <div>
+                        <div className="font-bold text-[#5F2108]">
+                          {displayName}
+                        </div>
+                        <Link
+                          to="/profile"
+                          onClick={() => setMobileMenuOpen(false)}
+                          className="text-sm text-[#A03E0F] hover:underline"
+                        >
+                          عرض الملف الشخصي
+                        </Link>
                       </div>
-                      <Link
-                        to="/profile"
-                        onClick={() => setMobileMenuOpen(false)}
-                        className="text-sm text-[#A03E0F] hover:underline"
-                      >
-                        عرض الملف الشخصي
-                      </Link>
                     </div>
+                    <Link
+                      to="/orders"
+                      onClick={() => setMobileMenuOpen(false)}
+                      className="-mx-3 block rounded-lg px-3 py-2 text-sm font-semibold text-[#5F2108] hover:bg-[#FFEAE3]"
+                    >
+                      طلباتي
+                    </Link>
+                    <button
+                      onClick={handleLogout}
+                      className="-mx-3 block w-full text-right rounded-lg px-3 py-2 text-sm font-semibold text-red-600 hover:bg-[#FFEAE3]"
+                    >
+                      تسجيل الخروج
+                    </button>
                   </div>
                 ) : (
                   <Link

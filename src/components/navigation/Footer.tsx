@@ -183,7 +183,7 @@ export default function Footer() {
               </li>
               <li>
                 <Link
-                  to="/support"
+                  to="/HelpCenter"
                   className="hover:text-[#B34510] transition-colors"
                 >
                   مركز المساعدة
