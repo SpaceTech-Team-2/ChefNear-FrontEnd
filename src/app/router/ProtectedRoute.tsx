@@ -1,7 +1,8 @@
 import { Navigate, Outlet } from "react-router-dom";
 
 export const ProtectedRoute = () => {
-  // التأكد من وجود التوكين في localStorage
+
+
   const token = localStorage.getItem("token");
 
   // لو التوكين مش موجود، يوجّه المستخدم فوراً لصفحة الـ Login
