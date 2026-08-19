@@ -122,7 +122,7 @@ export const router = createBrowserRouter([
         ),
       },
       {
-        path: "/DishDetailsModal",
+        path: "/DishDetailsModal/:id",
         element: (
           <Suspense fallback={<div>جاري التحميل...</div>}>
             <DishDetailsModal />

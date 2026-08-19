@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   ArrowRight,
   Heart,
@@ -12,31 +12,66 @@ import {
   Image as ImageIcon,
 } from 'lucide-react';
 import { Reviews } from '../auth/pages/Reviews';
+import { getDishesID } from '../../services/api';
+import { useParams } from 'react-router-dom';
+
+// const getData = async () => {
+//   const { id } = useParams();
+
+//   console.log("test ", id);
+
+//   const data = await getDishesID(id);
+//   return data.data.categoryName;
+// };
 
 export default function DishDetailsModal() {
+  // 1. استخراج الـ ID في المستوى الأعلى للمكون
+  const { id } = useParams();
+
+  // 2. إنشاء State لتخزين اسم القسم
+  const [category, setCategory]:any = useState("");
+
+  useEffect(() => {
+    const fetchCategory = async () => {
+      if (!id) return;
+
+      // 3. انتظار النتيجة بـ await
+      const response = await getDishesID(id);
+
+      // 4. حفظ النتيجة النصية مباشرة
+      if (response.data) {
+        setCategory(response.data);
+      }
+    };
+
+    fetchCategory();
+  }, [id]);
+
+  console.log(category);
+  
   const [quantity, setQuantity] = useState(1);
-  const [notes, setNotes] = useState('');
+  const [notes, setNotes] = useState("");
   const [isFavorite, setIsFavorite] = useState(false);
 
-  const pricePerItem = 85;
+  const pricePerItem = category.price;
   const totalPrice = pricePerItem * quantity;
 
-  const ingredients = [
-    'لحم غنم بلدي',
-    'جميد كركي',
-    'أرز مصري',
-    'صنوبر ولوز',
-    'سمن بلدي',
-  ];
+  // const ingredients: string[] = category.ingredients.map((item) => item.name);
+
+  
+  
 
   return (
-    <div dir="rtl" className="min-h-screen bg-[#FFF9F6] p-4 md:p-8 font-sans text-gray-800">
+    <div
+      dir="rtl"
+      className="min-h-screen bg-[#FFF9F6] p-4 md:p-8 font-sans text-gray-800"
+    >
       <div className="max-w-6xl mx-auto space-y-6">
         {/* Top Header Bar */}
         <header className="flex items-center justify-between py-2">
           <button className="flex items-center gap-2 text-[#A03E0F] hover:text-[#B34510] font-extrabold text-lg transition-colors">
             <ArrowRight className="w-5 h-5" />
-            <span>شيف نير</span>
+            <span>{category.chefDisplayName}</span>
           </button>
 
           <div className="flex items-center gap-3">
@@ -49,7 +84,7 @@ export default function DishDetailsModal() {
             >
               <Heart
                 className={`w-4 h-4 ${
-                  isFavorite ? 'fill-rose-500 text-rose-500' : 'text-gray-600'
+                  isFavorite ? "fill-rose-500 text-rose-500" : "text-gray-600"
                 }`}
               />
             </button>
@@ -58,13 +93,12 @@ export default function DishDetailsModal() {
 
         {/* Main Content Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-          
           {/* ================= RIGHT COLUMN: MEDIA GALLERY (7 Cols in RTL) ================= */}
           <div className="lg:col-span-7 space-y-4 order-1 lg:order-2">
             {/* Main Featured Image Card */}
             <div className="relative rounded-3xl overflow-hidden border border-rose-100 shadow-sm h-[380px] md:h-[450px]">
               <img
-                src="https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&w=1200&q=80"
+                src={category.images?.[0]?.imageUrl}
                 alt="منسف أردني أصيل باللحم البلدي"
                 className="w-full h-full object-cover"
               />
@@ -87,7 +121,7 @@ export default function DishDetailsModal() {
               {/* Sub Image 1 */}
               <div className="rounded-2xl overflow-hidden border border-rose-100 h-24">
                 <img
-                  src="https://images.unsplash.com/photo-1556910103-1c02745aae4d?auto=format&fit=crop&w=400&q=80"
+                  src={category.images?.[1]?.imageUrl}
                   alt="تحضير المنسف"
                   className="w-full h-full object-cover"
                 />
@@ -96,7 +130,7 @@ export default function DishDetailsModal() {
               {/* Sub Image 2 */}
               <div className="rounded-2xl overflow-hidden border border-rose-100 h-24">
                 <img
-                  src="https://images.unsplash.com/photo-1547592166-23ac45744acd?auto=format&fit=crop&w=400&q=80"
+                  src={category.images?.[0]?.imageUrl}
                   alt="تقديم الجميد"
                   className="w-full h-full object-cover"
                 />
@@ -106,16 +140,19 @@ export default function DishDetailsModal() {
 
           {/* ================= LEFT COLUMN: DISH DETAILS & ACTION FORM (5 Cols in RTL) ================= */}
           <div className="lg:col-span-5 bg-white rounded-3xl border border-rose-100 p-6 md:p-8 shadow-sm space-y-6 order-2 lg:order-1">
-            
             {/* Title & Price Header */}
             <div className="space-y-3">
               <div className="flex items-start justify-between gap-4">
                 <h1 className="text-2xl md:text-3xl font-black text-gray-900 leading-snug">
-                  منسف أردني أصيل باللحم البلدي
+                  {category.name}
                 </h1>
                 <div className="text-left shrink-0">
-                  <span className="text-2xl font-black text-[#A03E0F]">{pricePerItem}</span>
-                  <span className="text-xs text-gray-500 font-bold block">درهم</span>
+                  <span className="text-2xl font-black text-[#A03E0F]">
+                    {pricePerItem}
+                  </span>
+                  <span className="text-xs text-gray-500 font-bold block">
+                    درهم
+                  </span>
                 </div>
               </div>
 
@@ -146,8 +183,12 @@ export default function DishDetailsModal() {
                   <span className="absolute bottom-0 right-0 w-3 h-3 bg-emerald-500 rounded-full border border-white" />
                 </div>
                 <div>
-                  <h3 className="text-xs font-bold text-gray-900">الشيف أمينة</h3>
-                  <p className="text-[10px] text-gray-500">مطبخ الأردن الممتاز</p>
+                  <h3 className="text-xs font-bold text-gray-900">
+                    {category.chefDisplayName}
+                  </h3>
+                  <p className="text-[10px] text-gray-500">
+                    مطبخ الأردن الممتاز
+                  </p>
                 </div>
               </div>
 
@@ -163,21 +204,20 @@ export default function DishDetailsModal() {
             <div className="space-y-1.5">
               <h2 className="text-xs font-extrabold text-gray-900">الوصف</h2>
               <p className="text-xs text-gray-600 leading-relaxed">
-                منسف تقليدي محضر بالجميد الكركي الأصلي، يقدم مع أرز مبهر بلون ذهبي وقطع لحم غنم بلدي طرية تذوب في الفم. مزين باللوز والصنوبر المحمص مع خبز الشراك الرقيق. وجبة مثالية للتجمعات العائلية.
+                {category.description}
               </p>
             </div>
 
             {/* Main Ingredients */}
             <div className="space-y-2">
-              <h2 className="text-xs font-extrabold text-gray-900">المكونات الرئيسية</h2>
+              <h2 className="text-xs font-extrabold text-gray-900">
+                المكونات الرئيسية
+              </h2>
               <div className="flex flex-wrap gap-2">
-                {ingredients.map((item, idx) => (
-                  <span
-                    key={idx}
-                    className="bg-emerald-50/80 border border-emerald-100 text-emerald-800 text-[11px] font-bold px-3 py-1 rounded-full flex items-center gap-1.5"
-                  >
+                {category.ingredients?.map((iTem:any) => (
+                  <span className="bg-emerald-50/80 border border-emerald-100 text-emerald-800 text-[11px] font-bold px-3 py-1 rounded-full flex items-center gap-1.5">
                     <Leaf className="w-3 h-3 text-emerald-600" />
-                    <span>{item}</span>
+                    <span>{iTem.name}</span>
                   </span>
                 ))}
               </div>
@@ -186,7 +226,8 @@ export default function DishDetailsModal() {
             {/* Special Notes Input */}
             <div className="space-y-2">
               <label className="text-xs font-extrabold text-gray-900 block">
-                ملاحظات خاصة <span className="text-gray-400 font-normal">(اختياري)</span>
+                ملاحظات خاصة{" "}
+                <span className="text-gray-400 font-normal">(اختياري)</span>
               </label>
               <textarea
                 rows={2}
@@ -227,11 +268,10 @@ export default function DishDetailsModal() {
                 <span>• {totalPrice} درهم</span>
               </button>
             </div>
-
           </div>
         </div>
         <hr />
-                <Reviews/>
+        <Reviews />
       </div>
     </div>
   );

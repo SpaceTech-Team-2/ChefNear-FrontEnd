@@ -1,5 +1,6 @@
 import { Heart, Star, ArrowLeft, Utensils } from "lucide-react";
 import { Link } from "react-router-dom";
+import { getDishes } from "../../../services/api";
 
 interface Dish {
   id: number;
@@ -14,62 +15,26 @@ interface Dish {
   badgeType?: "green" | "yellow";
 }
 
-const dishes: Dish[] = [
-  {
-    id: 1,
-    title: "سلطة فتوش طازجة",
-    description: "خضار مقرمشة مع الخبز المحمص وتتبيلة دبس الرمان المميزة.",
-    price: 28,
-    rating: 4.6,
-    chefName: "الشيف سارة",
-    chefAvatar:
-      "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=100&q=80",
-    image:
-      "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?auto=format&fit=crop&w=600&q=80",
-    badge: "خيار صحي",
-    badgeType: "green",
-  },
-  {
-    id: 2,
-    title: "تشكيلة فطائر شامية",
-    description:
-      "عجينة هشّة وطرية بحشوات السبانخ، الجبنة العكاوى، واللحم المفروم.",
-    price: 35,
-    rating: 4.7,
-    chefName: "مخبز الحارة",
-    chefAvatar:
-      "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=100&q=80",
-    image:
-      "https://images.unsplash.com/photo-1626777552726-4a6b54c97e46?auto=format&fit=crop&w=600&q=80",
-  },
-  {
-    id: 3,
-    title: "مجبوس دجاج إماراتي",
-    description: "غني بنكهات الهيل والزعفران مع الدجاج الطازج والمكسرات.",
-    price: 65,
-    rating: 4.9,
-    chefName: "مطبخ أم علي",
-    chefAvatar:
-      "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=100&q=80",
-    image:
-      "https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?auto=format&fit=crop&w=600&q=80",
-    badge: "الأكثر مبيعاً",
-    badgeType: "yellow",
-  },
-  {
-    id: 4,
-    title: "حمص بالطحينة بلدي",
-    description:
-      "محضر على الطريقة التقليدية بزيت الزيتون الصافي والصنوبر المحمص.",
-    price: 45,
-    rating: 4.8,
-    chefName: "الشيف أحمد",
-    chefAvatar:
-      "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=100&q=80",
-    image:
-      "https://images.unsplash.com/photo-1577906096429-f73c2c312435?auto=format&fit=crop&w=600&q=80",
-  },
-];
+const response = await getDishes()
+const dataDishes = response.data; 
+console.log(dataDishes);
+
+const dishes: Dish[] = dataDishes.map((dishe: any) => ({
+  id: dishe.id,
+  title: dishe.name,
+  description: dishe.description,
+  price: dishe.price,
+  rating: 4.6,
+  chefName: "الشيف سارة",
+  chefAvatar:
+    "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=100&q=80",
+  image: dishe.primaryImageUrl,
+  badge: "خيار صحي",
+  badgeType: "green",
+}));
+
+  
+;
 
 const categories = [
   "مأكولات بحرية",
@@ -203,7 +168,7 @@ export default function HomeFeed() {
         {/* Dish Cards Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {dishes.map((dish) => (
-            <Link to={"/DishDetailsModal"}>
+            <Link to={`/DishDetailsModal/${dish.id}`}>
               <div
                 key={dish.id}
                 className="bg-white rounded-2xl overflow-hidden border border-gray-100 shadow-sm hover:shadow-md transition-shadow flex flex-col justify-between"
@@ -216,7 +181,7 @@ export default function HomeFeed() {
                       alt={dish.title}
                       className="w-full h-full object-cover"
                     />
-                    <button className="absolute top-3 left-3 bg-white/80 hover:bg-white backdrop-blur-sm p-1.5 rounded-full text-gray-700 transition-colors shadow-sm">
+                    <button className="z-5 absolute top-3 left-3 bg-white/80 hover:bg-white backdrop-blur-sm p-1.5 rounded-full text-gray-700 transition-colors shadow-sm">
                       <Heart className="w-4 h-4" />
                     </button>
 

@@ -21,12 +21,13 @@ export default function LoginPage() {
     login(values, {
       onSuccess: (response) => {
         console.log('Login successful:', response.data);
+
         // TODO: Save the token from response.data to local storage or context
-        localStorage.setItem("token", response.data.accessToken); // Save token to local storage
         setStatus({ success: 'Login successful! Redirecting...' });
         
         setTimeout(() => {
           if (response.data.role === "Chef") {
+            
             navigate("/chef"); // Redirect to chef dashboard on success
           } else {
             navigate("/"); // Redirect to homepage on success

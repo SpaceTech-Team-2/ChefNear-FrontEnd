@@ -30,6 +30,24 @@ export const loginUser = async (userData: any) => {
   return fetchingApi("post", "v1/Auth/login", userData);
 };
 
-export const getCategories = async () => {
-  return fetchingApi("get", "Categories");
+export const refreshToken = async (userData: any) => {
+  return fetchingApi("post", "v1/Auth/refresh-token", userData);
 };
+
+export const getCategories = async () => {
+  return fetchingApi("get", "v1/Categories");
+};
+
+export const getDishes = async () => {
+  return fetchingApi("get", "v1/Dishes");
+};
+
+export const getDishesID = async (ID:string) => {
+  return fetchingApi("get",`v1/Dishes/${ID}`);
+};
+
+
+export const getIngredients = async (userData: any,dishId:string) => {
+  return fetchingApi("get",`v1/Ingredients/${dishId}`,userData);
+};
+
