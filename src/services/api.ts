@@ -50,6 +50,9 @@ export interface GetDishesParams {
   Search?: string;
   CategoryId?: string;
   MaxPrice?: number;
+  ClientLatitude?: number;
+  ClientLongitude?: number;
+  MaxDistanceKm?: number;
   PageNumber?: number;
   PageSize?: number;
 }
