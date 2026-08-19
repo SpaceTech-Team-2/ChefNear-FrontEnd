@@ -2,6 +2,18 @@ import axios from "axios";
 
 const API_BASE_URL = "https://chefnear.runasp.net/api";
 
+const client = axios.create({ baseURL: API_BASE_URL });
+
+// يرفق التوكين (لو المستخدم مسجل دخول) مع كل الطلبات تلقائيًا
+client.interceptors.request.use((config) => {
+  const token = localStorage.getItem("token");
+  if (token) {
+    config.headers = config.headers ?? {};
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+
 type HttpMethod = "get" | "post" | "put" | "delete" | "patch";
 
 const fetchingApi = async (
@@ -11,9 +23,9 @@ const fetchingApi = async (
 ) => {
   try {
     const response =
-      method === "get"
-        ? await axios.get(`${API_BASE_URL}/${endpoint}`)
-        : await axios[method](`${API_BASE_URL}/${endpoint}`, data);
+      method === "get" || method === "delete"
+        ? await client[method](`/${endpoint}`)
+        : await client[method](`/${endpoint}`, data);
 
     return response.data;
   } catch (error) {
@@ -35,19 +47,19 @@ export const refreshToken = async (userData: any) => {
 };
 
 export const getCategories = async () => {
-  return fetchingApi("get", "v1/Categories");
+  return fetchingApi("get", "Categories");
 };
 
-export const getDishes = async () => {
-  return fetchingApi("get", "v1/Dishes");
+export const getDishes = async (params?: {
+  CategoryId?: string;
+  PageNumber?: number;
+  PageSize?: number;
+}) => {
+  const query = new URLSearchParams();
+  if (params?.CategoryId) query.append("CategoryId", params.CategoryId);
+  if (params?.PageNumber) query.append("PageNumber", params.PageNumber.toString());
+  if (params?.PageSize) query.append("PageSize", params.PageSize.toString());
+  
+  const endpoint = query.toString() ? `Dishes?${query.toString()}` : "Dishes";
+  return fetchingApi("get", endpoint);
 };
-
-export const getDishesID = async (ID:string) => {
-  return fetchingApi("get",`v1/Dishes/${ID}`);
-};
-
-
-export const getIngredients = async (userData: any,dishId:string) => {
-  return fetchingApi("get",`v1/Ingredients/${dishId}`,userData);
-};
-

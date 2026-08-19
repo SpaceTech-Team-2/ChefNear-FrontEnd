@@ -30,6 +30,12 @@ const SalesAnalytics = lazy(() => import("../../features/chef-dashboard/pages/Sa
 
 const ChefsList = lazy(() => import("../../features/discovery/ChefsList"));
 
+const ProfilePage = lazy(() => import("../../features/profile/ProfilePage"));
+const CartPage = lazy(() => import("../../features/cart/CartPage"));
+const OrdersHistoryPage = lazy(() => import("../../features/orders/OrdersHistoryPage"));
+const OrderTrackingPage = lazy(() => import("../../features/orders/OrderTrackingPage"));
+const OrderConfirmationPage = lazy(() => import("../../features/orders/OrderConfirmationPage"));
+
 
 
 
@@ -138,6 +144,22 @@ export const router = createBrowserRouter([
         ),
       },
       {
+        path: "/cart",
+        element: (
+          <Suspense fallback={<div>جاري التحميل...</div>}>
+            <CartPage />
+          </Suspense>
+        ),
+      },
+      {
+        path: "/order-confirmation/:localId",
+        element: (
+          <Suspense fallback={<div>جاري التحميل...</div>}>
+            <OrderConfirmationPage />
+          </Suspense>
+        ),
+      },
+      {
         path: "*",
         element: (
           <Suspense fallback={<div>جاري التحميل...</div>}>
@@ -218,6 +240,30 @@ export const router = createBrowserRouter([
             ),
           },
         ],
+      },
+      {
+        path: "/profile",
+        element: (
+          <Suspense fallback={<div>جاري التحميل...</div>}>
+            <ProfilePage />
+          </Suspense>
+        ),
+      },
+      {
+        path: "/orders",
+        element: (
+          <Suspense fallback={<div>جاري التحميل...</div>}>
+            <OrdersHistoryPage />
+          </Suspense>
+        ),
+      },
+      {
+        path: "/orders/:localId",
+        element: (
+          <Suspense fallback={<div>جاري التحميل...</div>}>
+            <OrderTrackingPage />
+          </Suspense>
+        ),
       },
     ],
   },
