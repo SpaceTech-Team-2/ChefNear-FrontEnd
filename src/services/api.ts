@@ -1,15 +1,14 @@
 import axios from "axios";
+import type { InternalAxiosRequestConfig } from "axios";
 
 const API_BASE_URL = "https://chefnear.runasp.net/api";
-
 const client = axios.create({ baseURL: API_BASE_URL });
 
 // يرفق التوكين (لو المستخدم مسجل دخول) مع كل الطلبات تلقائيًا
-client.interceptors.request.use((config) => {
+client.interceptors.request.use((config: InternalAxiosRequestConfig) => {
   const token = localStorage.getItem("token");
-  if (token) {
-    config.headers = config.headers ?? {};
-    config.headers.Authorization = `Bearer ${token}`;
+  if (token && config.headers) {
+    config.headers.set("Authorization", `Bearer ${token}`);
   }
   return config;
 });
@@ -40,10 +39,6 @@ export const registerUser = (userData: any) => {
 
 export const loginUser = async (userData: any) => {
   return fetchingApi("post", "v1/Auth/login", userData);
-};
-
-export const refreshToken = async (userData: any) => {
-  return fetchingApi("post", "v1/Auth/refresh-token", userData);
 };
 
 export const getCategories = async () => {
