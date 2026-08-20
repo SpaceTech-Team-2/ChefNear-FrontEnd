@@ -11,9 +11,8 @@ import {
   ShoppingCart,
   Image as ImageIcon,
 } from 'lucide-react';
-import { Reviews } from '../auth/pages/Reviews';
 import { getDishesID } from '../../services/api';
-import { useParams } from 'react-router-dom';
+import { useParams, Link } from 'react-router-dom';
 
 // const getData = async () => {
 //   const { id } = useParams();
@@ -270,8 +269,23 @@ export default function DishDetailsModal() {
             </div>
           </div>
         </div>
-        <hr />
-        <Reviews />
+        {/* ملخص التقييمات + رابط لصفحة التقييمات الكاملة */}
+        <Link
+          to={id ? `/DishDetailsModal/${id}/reviews` : "#"}
+          className="flex items-center justify-between bg-white rounded-3xl border border-rose-100 p-5 hover:border-[#B34510]/40 transition-colors shadow-sm"
+        >
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-1 bg-amber-50 text-amber-900 px-3 py-1.5 rounded-lg border border-amber-100">
+              <Star className="w-4 h-4 fill-amber-500 text-amber-500" />
+              <span className="font-black text-sm">4.9</span>
+            </div>
+            <div>
+              <h2 className="text-sm font-extrabold text-gray-900">تقييمات العملاء</h2>
+              <p className="text-xs text-gray-500">124 تقييم — شاهد الكل أو أضف رأيك</p>
+            </div>
+          </div>
+          <span className="text-xs font-bold text-[#A03E0F]">عرض كل التقييمات ←</span>
+        </Link>
       </div>
     </div>
   );

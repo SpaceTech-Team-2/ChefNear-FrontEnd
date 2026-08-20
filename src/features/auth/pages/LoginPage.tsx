@@ -1,122 +1,124 @@
 import { useFormik } from 'formik';
 import * as Yup from 'yup';
-import { useNavigate } from 'react-router-dom';
-import Button from '../../../components/ui/Button'; 
+import { Link, useNavigate } from 'react-router-dom';
+import { ChefHat, Loader2 } from 'lucide-react';
+import Button from '../../../components/ui/Button';
 import TextBox from '../../../components/ui/TextBox';
 import { useLogin } from '../../../services/useUser';
 
-
-
 export default function LoginPage() {
-
-  const { mutate: login, isPending, isError, error, isSuccess } = useLogin();
+  const { mutate: login, isPending } = useLogin();
   const navigate = useNavigate();
-  
-  async function handleLogin(values:any, { setSubmitting, setStatus }:any) {
-    // Reset status before new attempt
+
+  async function handleLogin(values: any, { setSubmitting, setStatus }: any) {
     setStatus(null);
     setSubmitting(true);
 
-    // Call the mutate function from useLogin hook
     login(values, {
       onSuccess: (response) => {
-        console.log('Login successful:', response.data);
+        // شكل الرد لسه مش موثّق رسميًا، فبنقرأ التوكين بشكل دفاعي من أكتر
+        // من اسم محتمل بدل ما نفترض شكل ثابت.
+        const payload = response?.data ?? {};
+        const accessToken = payload.accessToken || payload.token;
+        const refreshToken = payload.refreshToken;
 
-        // TODO: Save the token from response.data to local storage or context
-        setStatus({ success: 'Login successful! Redirecting...' });
-        
+        if (accessToken) {
+          localStorage.setItem("token", accessToken);
+        }
+        if (refreshToken) {
+          localStorage.setItem("refreshToken", refreshToken);
+        }
+        if (String(payload.role).toLowerCase() === "admin") {
+          localStorage.setItem("admin", "true");
+        }
+
+        setStatus({ success: 'تم تسجيل الدخول! جاري التحويل...' });
+
         setTimeout(() => {
-          if (response.data.role === "Chef") {
-            
-            navigate("/chef"); // Redirect to chef dashboard on success
+          if (payload.role === "Chef") {
+            navigate("/chef");
           } else {
-            navigate("/"); // Redirect to homepage on success
+            navigate("/");
           }
-        }, 1500);
+        }, 900);
       },
       onError: (err: any) => {
-        console.error('Login failed:', err.response?.data || err.message);
-        setStatus({ error: 'Login failed. ' + (err.response?.data?.message || err.message) });
+        setStatus({
+          error:
+            err?.response?.data?.message ||
+            'فشل تسجيل الدخول، تأكد من البريد الإلكتروني وكلمة المرور.',
+        });
         setSubmitting(false);
       },
       onSettled: () => {
-        setSubmitting(false); // Ensure submitting state is reset
-      }
+        setSubmitting(false);
+      },
     });
   }
 
-
-
   const loginSchema = Yup.object().shape({
     email: Yup.string().email('البريد الإلكتروني غير صحيح').required('البريد الإلكتروني مطلوب'),
-    password: Yup.string().required('كلمه المرور مطلوبه'),
+    password: Yup.string().required('كلمة المرور مطلوبة'),
   });
 
   const formik = useFormik({
-    initialValues: {
-      email: '',
-      password: '',
-    },
+    initialValues: { email: '', password: '' },
     validationSchema: loginSchema,
     onSubmit: handleLogin,
   });
 
-  // Handle status messages based on useLogin hook state
-  let statusMessage = null;
-  if (isError) {
-    statusMessage = <div className="text-red-500 text-center">{'Login failed. ' + (error as any)?.response?.data?.message || (error as any)?.message}</div>;
-  } else if (isSuccess && formik.status?.success) { // Use formik.status for success message after navigation logic
-    statusMessage = <div className="text-green-500 text-center">{formik.status.success}</div>;
-  } else if (isPending) {
-    statusMessage = <div className="text-blue-500 text-center">جاري تسجيل الدخول...</div>; // Changed from isLoading
-  }
-
   return (
-    <>
-      <div className="flex flex-1 items-center justify-center min-h-screen">
+    <div dir="rtl" className="min-h-screen bg-[#FFF9F6] flex items-center justify-center p-4 font-sans">
+      <div className="w-full max-w-sm">
+        <div className="flex flex-col items-center gap-2 mb-6">
+          <div className="w-14 h-14 rounded-2xl bg-[#B34510] text-white flex items-center justify-center shadow-sm">
+            <ChefHat className="w-7 h-7" />
+          </div>
+          <h1 className="text-2xl font-black text-[#5F2108]">تسجيل الدخول</h1>
+          <p className="text-sm text-[#A87C69]">اهلاً بيك تاني في ChefNear</p>
+        </div>
+
         <form
           onSubmit={formik.handleSubmit}
-          className="flex flex-col gap-3 w-80 m-2 bg-amber-200 p-4 rounded-lg border-1 border-amber-400"
+          className="flex flex-col gap-4 bg-white p-6 rounded-3xl border border-rose-100/80 shadow-sm"
         >
-          {statusMessage}
+          {formik.status?.error && (
+            <div className="text-red-600 text-xs bg-red-50 border border-red-100 rounded-xl p-3 text-center">
+              {formik.status.error}
+            </div>
+          )}
+          {formik.status?.success && (
+            <div className="text-green-700 text-xs bg-green-50 border border-green-100 rounded-xl p-3 text-center">
+              {formik.status.success}
+            </div>
+          )}
 
-          <h1 className="text-2xl font-bold mb-4 text-center caret-amber-600 ">
-            تسجيل الدخول
-          </h1>
-          <TextBox
-            formik={formik}
-            name="email"
-            placeholder="البريد الإلكتروني"
-            type="email"
-          />
-          <TextBox
-            formik={formik}
-            name="password"
-            placeholder="كلمة المرور"
-            type="password"
-          />
+          <TextBox formik={formik} name="email" placeholder="example@email.com" type="email" label="البريد الإلكتروني" />
+          <TextBox formik={formik} name="password" placeholder="••••••••" type="password" label="كلمة المرور" />
 
-          <Button type="submit" text="دخول" disabled={formik.isSubmitting || isPending} />
-          <button
-            onClick={() => navigate("/chef")}
-            className="bg-amber-500 text-white py-2 px-4 rounded hover:bg-amber-600"
-          >
-            انتقل إلى لوحةChef
-          </button>
-          <button
-            onClick={() => navigate("/")}
-            className="bg-amber-500 text-white py-2 px-4 rounded hover:bg-amber-600"
-          >
-           home
-          </button>
-          <a
-            href="/register"
-            className="text-blue-500 hover:underline text-center"
-          >
-            ليس لديك حساب؟ سجل الآن
-          </a>
+          <div className="pt-1">
+            <Button
+              type="submit"
+              text={isPending || formik.isSubmitting ? 'جاري الدخول...' : 'دخول'}
+              disabled={formik.isSubmitting || isPending}
+            />
+          </div>
+
+          {(isPending || formik.isSubmitting) && (
+            <div className="flex items-center justify-center gap-2 text-xs text-[#A87C69]">
+              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              <span>لحظات وبنتحقق من بياناتك...</span>
+            </div>
+          )}
+
+          <p className="text-center text-sm text-[#5F2108]">
+            ليس لديك حساب؟{' '}
+            <Link to="/register" className="font-bold text-[#B34510] hover:underline">
+              سجّل الآن
+            </Link>
+          </p>
         </form>
       </div>
-    </>
+    </div>
   );
 }

@@ -9,6 +9,11 @@ import {
 } from "lucide-react";
 
 // 1. إدارة المستخدمين
+const mockUsers = [
+  { id: "1", name: "أحمد محمد", email: "ahmed@example.com", type: "عميل", typeColor: "bg-blue-100 text-blue-700", status: "نشط", action: "حظر" },
+  { id: "2", name: "الشيف علي", email: "ali@chef.com", type: "شيف", typeColor: "bg-orange-100 text-orange-700", status: "نشط", action: "تجميد" },
+];
+
 export const AdminUsersView: React.FC = () => {
   return (
     <div className="space-y-6">
@@ -24,7 +29,8 @@ export const AdminUsersView: React.FC = () => {
         </div>
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm border overflow-x-auto">
+      {/* جدول (شاشات متوسطة وأكبر) */}
+      <div className="hidden md:block bg-white rounded-xl shadow-sm border overflow-x-auto">
         <table className="w-full text-sm text-right">
           <thead className="bg-gray-50 border-b text-gray-600">
             <tr>
@@ -36,52 +42,44 @@ export const AdminUsersView: React.FC = () => {
             </tr>
           </thead>
           <tbody className="divide-y">
-            <tr>
-              <td className="p-4 font-medium">أحمد محمد</td>
-              <td className="p-4 text-gray-500">ahmed@example.com</td>
-              <td className="p-4">
-                <span className="bg-blue-100 text-blue-700 px-2 py-1 rounded text-xs">
-                  عميل
-                </span>
-              </td>
-              <td className="p-4">
-                <span className="bg-green-100 text-green-700 px-2 py-1 rounded text-xs">
-                  نشط
-                </span>
-              </td>
-              <td className="p-4 flex gap-2">
-                <button
-                  title="حظر"
-                  className="p-1 text-red-600 hover:bg-red-50 rounded"
-                >
-                  <UserX className="w-4 h-4" />
-                </button>
-              </td>
-            </tr>
-            <tr>
-              <td className="p-4 font-medium">الشيف علي</td>
-              <td className="p-4 text-gray-500">ali@chef.com</td>
-              <td className="p-4">
-                <span className="bg-orange-100 text-orange-700 px-2 py-1 rounded text-xs">
-                  شيف
-                </span>
-              </td>
-              <td className="p-4">
-                <span className="bg-green-100 text-green-700 px-2 py-1 rounded text-xs">
-                  نشط
-                </span>
-              </td>
-              <td className="p-4 flex gap-2">
-                <button
-                  title="تجميد"
-                  className="p-1 text-red-600 hover:bg-red-50 rounded"
-                >
-                  <UserX className="w-4 h-4" />
-                </button>
-              </td>
-            </tr>
+            {mockUsers.map((u) => (
+              <tr key={u.id}>
+                <td className="p-4 font-medium">{u.name}</td>
+                <td className="p-4 text-gray-500">{u.email}</td>
+                <td className="p-4">
+                  <span className={`${u.typeColor} px-2 py-1 rounded text-xs`}>{u.type}</span>
+                </td>
+                <td className="p-4">
+                  <span className="bg-green-100 text-green-700 px-2 py-1 rounded text-xs">{u.status}</span>
+                </td>
+                <td className="p-4 flex gap-2">
+                  <button title={u.action} className="p-1 text-red-600 hover:bg-red-50 rounded">
+                    <UserX className="w-4 h-4" />
+                  </button>
+                </td>
+              </tr>
+            ))}
           </tbody>
         </table>
+      </div>
+
+      {/* كروت (موبايل) */}
+      <div className="md:hidden space-y-3">
+        {mockUsers.map((u) => (
+          <div key={u.id} className="bg-white rounded-xl shadow-sm border p-4 space-y-2.5">
+            <div className="flex items-center justify-between">
+              <span className="font-bold text-gray-800">{u.name}</span>
+              <button title={u.action} className="p-1.5 text-red-600 bg-red-50 rounded-lg">
+                <UserX className="w-4 h-4" />
+              </button>
+            </div>
+            <p className="text-xs text-gray-500">{u.email}</p>
+            <div className="flex items-center gap-2">
+              <span className={`${u.typeColor} px-2 py-1 rounded text-xs`}>{u.type}</span>
+              <span className="bg-green-100 text-green-700 px-2 py-1 rounded text-xs">{u.status}</span>
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   );

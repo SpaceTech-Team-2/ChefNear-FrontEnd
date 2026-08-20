@@ -162,6 +162,18 @@ export default function Navbar() {
                   >
                     طلباتي
                   </Link>
+                  <Link
+                    to="/addresses"
+                    className="block px-4 py-2 hover:bg-gray-50 rounded-lg text-gray-700"
+                  >
+                    العناوين
+                  </Link>
+                  <Link
+                    to="/preferences"
+                    className="block px-4 py-2 hover:bg-gray-50 rounded-lg text-gray-700"
+                  >
+                    تفضيلاتك
+                  </Link>
                   <button
                     onClick={handleLogout}
                     className="block w-full text-right px-4 py-2 hover:bg-gray-50 rounded-lg text-red-600"
@@ -274,6 +286,20 @@ export default function Navbar() {
                       className="-mx-3 block rounded-lg px-3 py-2 text-sm font-semibold text-[#5F2108] hover:bg-[#FFEAE3]"
                     >
                       طلباتي
+                    </Link>
+                    <Link
+                      to="/addresses"
+                      onClick={() => setMobileMenuOpen(false)}
+                      className="-mx-3 block rounded-lg px-3 py-2 text-sm font-semibold text-[#5F2108] hover:bg-[#FFEAE3]"
+                    >
+                      العناوين
+                    </Link>
+                    <Link
+                      to="/preferences"
+                      onClick={() => setMobileMenuOpen(false)}
+                      className="-mx-3 block rounded-lg px-3 py-2 text-sm font-semibold text-[#5F2108] hover:bg-[#FFEAE3]"
+                    >
+                      تفضيلاتك
                     </Link>
                     <button
                       onClick={handleLogout}
