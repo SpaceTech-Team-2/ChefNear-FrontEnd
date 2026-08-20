@@ -231,7 +231,11 @@ export default function HomeFeed() {
 
             {!dishesLoading &&
               dishes.map((dish) => (
-                <Link key={dish.id} to="/DishDetailsModal" className="contents">
+                <Link
+                  key={dish.id}
+                  to={`/DishDetailsModal/${dish.id}`}
+                  className="contents"
+                >
                   <div className="bg-white rounded-2xl overflow-hidden border border-gray-100 shadow-sm hover:shadow-md transition-shadow flex flex-col justify-between">
                     <div>
                       {/* Image */}
