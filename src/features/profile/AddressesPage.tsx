@@ -1,8 +1,13 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { ArrowRight, MapPin, Plus, Star, Loader2 } from "lucide-react";
-import { getMyAddresses, createAddress } from "../../services/api";
+import { ArrowRight, MapPin, Plus, Star, Loader2, Pencil, Trash2 } from "lucide-react";
+import {
+  getMyAddresses,
+  createAddress,
+  updateAddress,
+  deleteAddress,
+} from "../../services/api";
 
 interface Address {
   id: string;
@@ -18,7 +23,9 @@ interface ApiEnvelope<T> {
 
 export default function AddressesPage() {
   const [showForm, setShowForm] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState({ label: "", city: "", details: "" });
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const { data, isLoading, isError, refetch } = useQuery<ApiEnvelope<Address[]>>({
     queryKey: ["my-addresses"],
@@ -26,6 +33,12 @@ export default function AddressesPage() {
   });
 
   const addresses = data?.data ?? [];
+
+  const resetForm = () => {
+    setForm({ label: "", city: "", details: "" });
+    setShowForm(false);
+    setEditingId(null);
+  };
 
   const createMutation = useMutation({
     mutationFn: () =>
@@ -38,11 +51,38 @@ export default function AddressesPage() {
         isDefault: addresses.length === 0,
       }),
     onSuccess: () => {
-      setForm({ label: "", city: "", details: "" });
-      setShowForm(false);
+      resetForm();
       refetch();
     },
   });
+
+  const updateMutation = useMutation({
+    mutationFn: () =>
+      updateAddress(editingId as string, {
+        label: form.label || "عنوان",
+        city: form.city,
+        details: form.details,
+        latitude: 0,
+        longitude: 0,
+      }),
+    onSuccess: () => {
+      resetForm();
+      refetch();
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (addressId: string) => deleteAddress(addressId),
+    onMutate: (addressId) => setDeletingId(addressId),
+    onSettled: () => setDeletingId(null),
+    onSuccess: () => refetch(),
+  });
+
+  const startEdit = (addr: Address) => {
+    setEditingId(addr.id);
+    setForm({ label: addr.label || "", city: addr.city || "", details: addr.details || "" });
+    setShowForm(true);
+  };
 
   return (
     <div dir="rtl" className="min-h-screen bg-[#FFF9F6] p-4 md:p-8 font-sans text-gray-800">
@@ -104,6 +144,27 @@ export default function AddressesPage() {
                     {addr.city} {addr.details ? `— ${addr.details}` : ""}
                   </p>
                 </div>
+                <div className="flex items-center gap-1 shrink-0">
+                  <button
+                    onClick={() => startEdit(addr)}
+                    className="p-2 text-gray-400 hover:text-[#B34510] hover:bg-rose-50 rounded-full transition-colors"
+                    aria-label="تعديل العنوان"
+                  >
+                    <Pencil className="w-3.5 h-3.5" />
+                  </button>
+                  <button
+                    onClick={() => deleteMutation.mutate(addr.id)}
+                    disabled={deletingId === addr.id}
+                    className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-full transition-colors disabled:opacity-50"
+                    aria-label="حذف العنوان"
+                  >
+                    {deletingId === addr.id ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    ) : (
+                      <Trash2 className="w-3.5 h-3.5" />
+                    )}
+                  </button>
+                </div>
               </div>
             ))}
           </div>
@@ -111,7 +172,9 @@ export default function AddressesPage() {
 
         {showForm ? (
           <div className="bg-white rounded-3xl border border-rose-100/80 shadow-sm p-5 space-y-3">
-            <h2 className="font-bold text-gray-900 text-sm">إضافة عنوان جديد</h2>
+            <h2 className="font-bold text-gray-900 text-sm">
+              {editingId ? "تعديل العنوان" : "إضافة عنوان جديد"}
+            </h2>
             <input
               placeholder="اسم العنوان (المنزل، العمل...)"
               value={form.label}
@@ -132,21 +195,25 @@ export default function AddressesPage() {
             />
             <div className="flex gap-2 pt-1">
               <button
-                onClick={() => setShowForm(false)}
+                onClick={resetForm}
                 className="flex-1 py-2.5 rounded-xl text-sm font-bold bg-[#FFEAE3] text-[#A03E0F]"
               >
                 إلغاء
               </button>
               <button
-                onClick={() => createMutation.mutate()}
-                disabled={createMutation.isPending || !form.city}
+                onClick={() =>
+                  editingId ? updateMutation.mutate() : createMutation.mutate()
+                }
+                disabled={createMutation.isPending || updateMutation.isPending || !form.city}
                 className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-bold bg-[#B34510] hover:bg-[#A03E0F] text-white disabled:opacity-60"
               >
-                {createMutation.isPending && <Loader2 className="w-4 h-4 animate-spin" />}
+                {(createMutation.isPending || updateMutation.isPending) && (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                )}
                 <span>حفظ العنوان</span>
               </button>
             </div>
-            {createMutation.isError && (
+            {(createMutation.isError || updateMutation.isError) && (
               <p className="text-xs text-red-600 text-center">تعذر حفظ العنوان، حاول تاني.</p>
             )}
           </div>

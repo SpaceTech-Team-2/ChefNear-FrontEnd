@@ -11,6 +11,7 @@ import {
   Settings2,
 } from "lucide-react";
 import { getMyProfile } from "../../services/api";
+import { logout } from "../../services/auth";
 
 // شكل الرد لسه مش موثّق في الـ swagger (GET /api/v1/profile/me بيرجع "OK" بس من
 // غير schema)، فبنتعامل مع الحقول دي بشكل دفاعي (كلها اختيارية) بدل ما نفترض شكل ثابت.
@@ -45,8 +46,8 @@ export default function ProfilePage() {
     [profile?.firstName, profile?.lastName].filter(Boolean).join(" ") ||
     "مستخدم ChefNear";
 
-  const handleLogout = () => {
-    localStorage.removeItem("token");
+  const handleLogout = async () => {
+    await logout();
     navigate("/login");
   };
 

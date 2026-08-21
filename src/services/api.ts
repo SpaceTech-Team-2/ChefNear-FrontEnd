@@ -93,11 +93,71 @@ export const createAddress = async (payload: CreateAddressPayload) => {
   return fetchingApi("post", "v1/Addresses", payload);
 };
 
+export const updateAddress = async (
+  addressId: string,
+  payload: CreateAddressPayload
+) => {
+  return fetchingApi("put", `v1/Addresses/${addressId}`, payload);
+};
+
+export const deleteAddress = async (addressId: string) => {
+  return fetchingApi("delete", `v1/Addresses/${addressId}`);
+};
+
 // ===== Orders (محتاج تسجيل دخول) =====
-// ملحوظة: الـ backend حالياً معندوش endpoint لجلب "طلباتي" أو "تفاصيل طلب" (GET) —
-// اللي متاح بس هو إنشاء الطلب (checkout) وإجراءات عليه (cancel/accept/...).
-// فبنخزن نتيجة كل عملية checkout ناجحة محليًا (localStorage) عشان نقدر نعرض
-// "طلباتي" و"تتبع الطلب"، وأي تحديث حالة (زي الإلغاء) بيتم فعليًا عبر الـ API.
+export interface GetOrdersParams {
+  IsActive?: boolean;
+  PageNumber?: number;
+  PageSize?: number;
+}
+
+// "طلباتي" الحقيقية من السيرفر (بدل الاعتماد على localStorage بس)
+export const getMyOrders = async (params: GetOrdersParams = {}) => {
+  const query = new URLSearchParams(
+    Object.entries(params)
+      .filter(([, value]) => value !== undefined && value !== null && value !== "")
+      .map(([key, value]) => [key, String(value)])
+  ).toString();
+
+  return fetchingApi("get", `v1/Orders${query ? `?${query}` : ""}`);
+};
+
+export const getOrderById = async (orderId: string) => {
+  return fetchingApi("get", `v1/Orders/${orderId}`);
+};
+
+// إجراءات دورة حياة الطلب (جانب الشيف)
+export const acceptOrder = async (orderId: string) => {
+  return fetchingApi("put", `v1/Orders/${orderId}/accept`);
+};
+
+export interface StartPreparingPayload {
+  estimatedCookingTime: string; // TimeSpan بصيغة "HH:mm:ss"
+}
+
+export const startPreparingOrder = async (
+  orderId: string,
+  payload: StartPreparingPayload
+) => {
+  return fetchingApi("put", `v1/Orders/${orderId}/start-preparing`, payload);
+};
+
+export interface MarkOrderReadyPayload {
+  estimatedDeliveryTime: string; // TimeSpan بصيغة "HH:mm:ss"
+  deliveryFee: number;
+}
+
+export const markOrderReady = async (
+  orderId: string,
+  payload: MarkOrderReadyPayload
+) => {
+  return fetchingApi("put", `v1/Orders/${orderId}/mark-as-ready`, payload);
+};
+
+export const markOrderDelivered = async (orderId: string) => {
+  return fetchingApi("put", `v1/Orders/${orderId}/mark-as-delivered`);
+};
+
 export interface OrderItemPayload {
   dishId: string;
   quantity: number;
@@ -139,4 +199,103 @@ export const cancelOrder = async (
   payload: CancelOrderPayload
 ) => {
   return fetchingApi("put", `v1/Orders/${orderId}/cancel`, payload);
+};
+
+// ===== Dishes CRUD (جانب الشيف — محتاج تسجيل دخول) =====
+export interface IngredientPayload {
+  name: string;
+  quantity: string;
+}
+
+export interface CreateDishPayload {
+  categoryId: string;
+  name: string;
+  description: string;
+  price: number;
+  quantityAvailable: number;
+  allergenInfo?: string;
+  imageUrls?: string[];
+  ingredients?: IngredientPayload[];
+}
+
+export const createDish = async (payload: CreateDishPayload) => {
+  return fetchingApi("post", "v1/Dishes", payload);
+};
+
+export type DishStatus = "Available" | "Unavailable" | "RemovedByAdmin";
+
+export interface UpdateDishPayload {
+  categoryId: string;
+  name: string;
+  description: string;
+  price: number;
+  quantityAvailable: number;
+  allergenInfo?: string;
+  status: DishStatus;
+}
+
+export const updateDish = async (dishId: string, payload: UpdateDishPayload) => {
+  return fetchingApi("put", `v1/Dishes/${dishId}`, payload);
+};
+
+export const deleteDish = async (dishId: string) => {
+  return fetchingApi("delete", `v1/Dishes/${dishId}`);
+};
+
+// ===== Reviews (التقييمات الحقيقية) =====
+export const getDishReviews = async (
+  dishId: string,
+  params: { pageNumber?: number; pageSize?: number } = {}
+) => {
+  const query = new URLSearchParams(
+    Object.entries(params)
+      .filter(([, v]) => v !== undefined)
+      .map(([k, v]) => [k, String(v)])
+  ).toString();
+  return fetchingApi("get", `v1/Review/dish/${dishId}${query ? `?${query}` : ""}`);
+};
+
+export const getDishRating = async (dishId: string) => {
+  return fetchingApi("get", `v1/Review/dish/${dishId}/rating`);
+};
+
+export interface CreateReviewPayload {
+  orderId: string;
+  dishId: string;
+  rating: number;
+  comment: string;
+}
+
+export const createReview = async (payload: CreateReviewPayload) => {
+  return fetchingApi("post", "v1/Review", payload);
+};
+
+// ===== Wallet (جانب الشيف) =====
+export const getMyWallet = async () => {
+  return fetchingApi("get", "v1/Wallets/my-wallet");
+};
+
+// ===== Notifications =====
+export const getNotifications = async (
+  params: { pageNumber?: number; pageSize?: number } = {}
+) => {
+  const query = new URLSearchParams(
+    Object.entries(params)
+      .filter(([, v]) => v !== undefined)
+      .map(([k, v]) => [k, String(v)])
+  ).toString();
+  return fetchingApi("get", `v1/Notifications${query ? `?${query}` : ""}`);
+};
+
+export const deleteNotification = async (id: string) => {
+  return fetchingApi("delete", `v1/Notifications/${id}`);
+};
+
+export const clearNotifications = async () => {
+  return fetchingApi("delete", "v1/Notifications/clear");
+};
+
+// ===== تسجيل الخروج الحقيقي (بيلغي التوكين من السيرفر مش بس من المتصفح) =====
+export const logoutUser = async (refreshToken: string) => {
+  return fetchingApi("post", "v1/Auth/logout", { refreshToken });
 };
