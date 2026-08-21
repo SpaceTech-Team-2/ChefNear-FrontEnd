@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import {
   Search,
@@ -284,8 +285,9 @@ export default function ChefsList() {
 
                 {!dishesLoading &&
                   dishes.map((dish) => (
-                    <div
+                    <Link
                       key={dish.id}
+                      to={`/DishDetailsModal/${dish.id}`}
                       className="bg-white rounded-2xl overflow-hidden border border-gray-100 shadow-sm hover:shadow-md transition-shadow flex flex-col"
                     >
                       <div className="relative h-40 w-full">
@@ -294,19 +296,23 @@ export default function ChefsList() {
                           alt={dish.name}
                           className="w-full h-full object-cover"
                         />
-                        <button className="absolute top-3 left-3 bg-white/80 hover:bg-white backdrop-blur-sm p-1.5 rounded-full text-gray-700 transition-colors shadow-sm">
+                        <button
+                          onClick={(e) => e.preventDefault()}
+                          className="absolute top-3 left-3 bg-white/80 hover:bg-white backdrop-blur-sm p-1.5 rounded-full text-gray-700 transition-colors shadow-sm"
+                        >
                           <Heart className="w-4 h-4" />
                         </button>
                         <button
-                          onClick={() =>
+                          onClick={(e) => {
+                            e.preventDefault();
                             addItem({
                               dishId: dish.id,
                               name: dish.name,
                               price: dish.price,
                               image: dish.primaryImageUrl,
                               chefDisplayName: dish.chefDisplayName,
-                            })
-                          }
+                            });
+                          }}
                           className="absolute bottom-3 left-3 bg-amber-800 hover:bg-amber-900 text-white rounded-full p-2 shadow-sm transition-colors"
                           aria-label="أضف إلى السلة"
                         >
@@ -337,7 +343,7 @@ export default function ChefsList() {
                             )}
                         </div>
                       </div>
-                    </div>
+                    </Link>
                   ))}
               </div>
             )}

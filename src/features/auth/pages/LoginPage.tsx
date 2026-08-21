@@ -31,7 +31,9 @@ export default function LoginPage() {
         setStatus({ success: 'تم تسجيل الدخول! جاري التحويل...' });
 
         setTimeout(() => {
-          if (payload.role === "Chef") {
+          if (String(payload.role).toLowerCase() === "admin") {
+            navigate("/adminDashboard");
+          } else if (payload.role === "Chef") {
             navigate("/chef");
           } else {
             navigate("/");

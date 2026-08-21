@@ -203,12 +203,12 @@ export default function DishDetailsModal() {
                 </div>
               </div>
 
-              <a
-                href="#"
+              <Link
+                to="/ChefProfilePage"
                 className="text-xs font-bold text-[#A03E0F] hover:underline"
               >
                 عرض الملف
-              </a>
+              </Link>
             </div>
 
             {/* Description */}
