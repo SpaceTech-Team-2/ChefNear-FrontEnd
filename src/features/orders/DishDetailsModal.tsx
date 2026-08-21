@@ -14,51 +14,63 @@ import {
 import { getDishesID } from '../../services/api';
 import { useParams, Link } from 'react-router-dom';
 
-// const getData = async () => {
-//   const { id } = useParams();
-
-//   console.log("test ", id);
-
-//   const data = await getDishesID(id);
-//   return data.data.categoryName;
-// };
+interface Dish {
+  name?: string;
+  description?: string;
+  price?: number;
+  chefDisplayName?: string;
+  images?: { imageUrl: string }[];
+  ingredients?: { name: string }[];
+}
 
 export default function DishDetailsModal() {
-  // 1. استخراج الـ ID في المستوى الأعلى للمكون
   const { id } = useParams();
 
-  // 2. إنشاء State لتخزين اسم القسم
-  const [category, setCategory]:any = useState("");
+  const [dish, setDish] = useState<Dish | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const fetchCategory = async () => {
-      if (!id) return;
-
-      // 3. انتظار النتيجة بـ await
-      const response = await getDishesID(id);
-
-      // 4. حفظ النتيجة النصية مباشرة
-      if (response.data) {
-        setCategory(response.data);
-      }
-    };
-
-    fetchCategory();
+    if (!id) return;
+    setIsLoading(true);
+    getDishesID(id)
+      .then((response) => setDish(response?.data ?? null))
+      .catch(() => setDish(null))
+      .finally(() => setIsLoading(false));
   }, [id]);
 
-  console.log(category);
-  
   const [quantity, setQuantity] = useState(1);
   const [notes, setNotes] = useState("");
   const [isFavorite, setIsFavorite] = useState(false);
 
-  const pricePerItem = category.price;
+  const pricePerItem = dish?.price ?? 0;
   const totalPrice = pricePerItem * quantity;
 
-  // const ingredients: string[] = category.ingredients.map((item) => item.name);
+  if (isLoading) {
+    return (
+      <div dir="rtl" className="min-h-screen bg-[#FFF9F6] p-4 md:p-8 font-sans">
+        <div className="max-w-6xl mx-auto animate-pulse space-y-4">
+          <div className="h-[380px] bg-rose-100/60 rounded-3xl" />
+          <div className="h-6 w-1/2 bg-rose-100/60 rounded" />
+        </div>
+      </div>
+    );
+  }
 
-  
-  
+  if (!dish) {
+    return (
+      <div dir="rtl" className="min-h-screen bg-[#FFF9F6] flex items-center justify-center p-6">
+        <div className="text-center space-y-3">
+          <h2 className="text-xl font-black text-gray-900">لم يتم العثور على الطبق</h2>
+          <Link
+            to="/"
+            className="inline-block bg-[#B34510] text-white font-bold px-6 py-2.5 rounded-full hover:bg-[#A03E0F] transition-colors"
+          >
+            رجوع للرئيسية
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div
@@ -70,7 +82,7 @@ export default function DishDetailsModal() {
         <header className="flex items-center justify-between py-2">
           <button className="flex items-center gap-2 text-[#A03E0F] hover:text-[#B34510] font-extrabold text-lg transition-colors">
             <ArrowRight className="w-5 h-5" />
-            <span>{category.chefDisplayName}</span>
+            <span>{dish.chefDisplayName}</span>
           </button>
 
           <div className="flex items-center gap-3">
@@ -97,7 +109,7 @@ export default function DishDetailsModal() {
             {/* Main Featured Image Card */}
             <div className="relative rounded-3xl overflow-hidden border border-rose-100 shadow-sm h-[380px] md:h-[450px]">
               <img
-                src={category.images?.[0]?.imageUrl}
+                src={dish.images?.[0]?.imageUrl}
                 alt="منسف أردني أصيل باللحم البلدي"
                 className="w-full h-full object-cover"
               />
@@ -120,7 +132,7 @@ export default function DishDetailsModal() {
               {/* Sub Image 1 */}
               <div className="rounded-2xl overflow-hidden border border-rose-100 h-24">
                 <img
-                  src={category.images?.[1]?.imageUrl}
+                  src={dish.images?.[1]?.imageUrl}
                   alt="تحضير المنسف"
                   className="w-full h-full object-cover"
                 />
@@ -129,7 +141,7 @@ export default function DishDetailsModal() {
               {/* Sub Image 2 */}
               <div className="rounded-2xl overflow-hidden border border-rose-100 h-24">
                 <img
-                  src={category.images?.[0]?.imageUrl}
+                  src={dish.images?.[0]?.imageUrl}
                   alt="تقديم الجميد"
                   className="w-full h-full object-cover"
                 />
@@ -143,7 +155,7 @@ export default function DishDetailsModal() {
             <div className="space-y-3">
               <div className="flex items-start justify-between gap-4">
                 <h1 className="text-2xl md:text-3xl font-black text-gray-900 leading-snug">
-                  {category.name}
+                  {dish.name}
                 </h1>
                 <div className="text-left shrink-0">
                   <span className="text-2xl font-black text-[#A03E0F]">
@@ -183,7 +195,7 @@ export default function DishDetailsModal() {
                 </div>
                 <div>
                   <h3 className="text-xs font-bold text-gray-900">
-                    {category.chefDisplayName}
+                    {dish.chefDisplayName}
                   </h3>
                   <p className="text-[10px] text-gray-500">
                     مطبخ الأردن الممتاز
@@ -203,7 +215,7 @@ export default function DishDetailsModal() {
             <div className="space-y-1.5">
               <h2 className="text-xs font-extrabold text-gray-900">الوصف</h2>
               <p className="text-xs text-gray-600 leading-relaxed">
-                {category.description}
+                {dish.description}
               </p>
             </div>
 
@@ -213,8 +225,11 @@ export default function DishDetailsModal() {
                 المكونات الرئيسية
               </h2>
               <div className="flex flex-wrap gap-2">
-                {category.ingredients?.map((iTem:any) => (
-                  <span className="bg-emerald-50/80 border border-emerald-100 text-emerald-800 text-[11px] font-bold px-3 py-1 rounded-full flex items-center gap-1.5">
+                {dish.ingredients?.map((iTem: any, idx: number) => (
+                  <span
+                    key={iTem.name ?? idx}
+                    className="bg-emerald-50/80 border border-emerald-100 text-emerald-800 text-[11px] font-bold px-3 py-1 rounded-full flex items-center gap-1.5"
+                  >
                     <Leaf className="w-3 h-3 text-emerald-600" />
                     <span>{iTem.name}</span>
                   </span>

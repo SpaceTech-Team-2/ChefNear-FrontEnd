@@ -16,17 +16,13 @@ export default function LoginPage() {
 
     login(values, {
       onSuccess: (response) => {
-        // شكل الرد لسه مش موثّق رسميًا، فبنقرأ التوكين بشكل دفاعي من أكتر
-        // من اسم محتمل بدل ما نفترض شكل ثابت.
+        // useLogin (services/useUser.ts) بيحفظ الـ accessToken في localStorage
+        // ("token") لوحده أول ما اللوجن ينجح، هنا بس بنكمّل باقي البيانات
+        // (refreshToken وعلم الأدمن) اللي مش شغل الـ hook.
         const payload = response?.data ?? {};
-        const accessToken = payload.accessToken || payload.token;
-        const refreshToken = payload.refreshToken;
 
-        if (accessToken) {
-          localStorage.setItem("token", accessToken);
-        }
-        if (refreshToken) {
-          localStorage.setItem("refreshToken", refreshToken);
+        if (payload.refreshToken) {
+          localStorage.setItem("refreshToken", payload.refreshToken);
         }
         if (String(payload.role).toLowerCase() === "admin") {
           localStorage.setItem("admin", "true");

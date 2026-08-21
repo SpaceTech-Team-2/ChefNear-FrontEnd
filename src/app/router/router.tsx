@@ -37,6 +37,7 @@ const AddressesPage = lazy(() => import("../../features/profile/AddressesPage"))
 const CartPage = lazy(() => import("../../features/cart/CartPage"));
 const OrdersHistoryPage = lazy(() => import("../../features/orders/OrdersHistoryPage"));
 const OrderTrackingPage = lazy(() => import("../../features/orders/OrderTrackingPage"));
+const CancelOrderPage = lazy(() => import("../../features/orders/CancelOrderPage"));
 const OrderConfirmationPage = lazy(() => import("../../features/orders/OrderConfirmationPage"));
 
 
@@ -289,6 +290,14 @@ export const router = createBrowserRouter([
         element: (
           <Suspense fallback={<div>جاري التحميل...</div>}>
             <OrderTrackingPage />
+          </Suspense>
+        ),
+      },
+      {
+        path: "/orders/:localId/cancel",
+        element: (
+          <Suspense fallback={<div>جاري التحميل...</div>}>
+            <CancelOrderPage />
           </Suspense>
         ),
       },

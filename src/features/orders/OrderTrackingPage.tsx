@@ -1,19 +1,15 @@
 import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
-import { useMutation } from "@tanstack/react-query";
 import {
   CheckCircle2,
   Circle,
   XCircle,
   ClipboardList,
-  Loader2,
 } from "lucide-react";
 import {
   getOrderByLocalId,
-  markOrderCancelled,
   type StoredOrder,
 } from "../../services/orderHistory";
-import { cancelOrder, type CancellationReasonType } from "../../services/api";
 
 // ملحوظة: الـ backend معندوش endpoint لجلب حالة الطلب لحظيًا (GET)، فالمراحل
 // المعروضة هنا افتراضية بترتيب منطقي بس مش متابعة حقيقية للـ backend —
@@ -28,38 +24,10 @@ const STEPS = [
 export default function OrderTrackingPage() {
   const { localId } = useParams<{ localId: string }>();
   const [order, setOrder] = useState<StoredOrder | undefined>();
-  const [cancelError, setCancelError] = useState<string | null>(null);
-  const [showCancelForm, setShowCancelForm] = useState(false);
-  const [reason, setReason] = useState<CancellationReasonType>("ClientChangedMind");
-  const [reasonText, setReasonText] = useState("");
 
   useEffect(() => {
     if (localId) setOrder(getOrderByLocalId(localId));
   }, [localId]);
-
-  const cancelMutation = useMutation({
-    mutationFn: () => {
-      if (!order?.serverOrderId) {
-        throw new Error("لا يوجد معرف طلب صالح من السيرفر لإلغائه.");
-      }
-      return cancelOrder(order.serverOrderId, {
-        reasonType: reason,
-        reasonFreeText: reasonText || undefined,
-      });
-    },
-    onSuccess: () => {
-      if (order) {
-        markOrderCancelled(order.localId, reasonText || reason);
-        setOrder({ ...order, status: "Cancelled", cancellationReason: reasonText || reason });
-      }
-      setShowCancelForm(false);
-    },
-    onError: (err: any) => {
-      setCancelError(
-        err?.response?.data?.message || err?.message || "تعذر إلغاء الطلب."
-      );
-    },
-  });
 
   if (!order) {
     return (
@@ -142,61 +110,19 @@ export default function OrderTrackingPage() {
             </div>
           </div>
 
-          {canCancel && !showCancelForm && (
-            <button
-              onClick={() => setShowCancelForm(true)}
-              className="w-full text-red-600 border border-red-100 font-bold py-2.5 rounded-xl hover:bg-red-50 transition-colors text-sm"
+          {canCancel && (
+            <Link
+              to={`/orders/${order.localId}/cancel`}
+              className="block w-full text-center text-red-600 border border-red-100 font-bold py-2.5 rounded-xl hover:bg-red-50 transition-colors text-sm"
             >
               إلغاء الطلب
-            </button>
+            </Link>
           )}
 
           {!order.serverOrderId && !isCancelled && (
             <p className="text-[11px] text-gray-400 text-center">
               مفيش معرف طلب مؤكد من السيرفر لهذا الطلب، فمش هيتم إلغاؤه من هنا.
             </p>
-          )}
-
-          {showCancelForm && (
-            <div className="space-y-3 border border-red-100 rounded-2xl p-4">
-              <label className="text-xs font-bold text-gray-600">سبب الإلغاء</label>
-              <select
-                value={reason}
-                onChange={(e) => setReason(e.target.value as CancellationReasonType)}
-                className="w-full text-sm border border-gray-200 rounded-lg px-2.5 py-2 outline-none"
-              >
-                <option value="ClientChangedMind">غيّرت رأيي</option>
-                <option value="ClientOrderDelayed">الطلب اتأخر</option>
-                <option value="ClientIncorrectDetails">بيانات غير صحيحة</option>
-                <option value="ClientOther">سبب آخر</option>
-              </select>
-              <textarea
-                value={reasonText}
-                onChange={(e) => setReasonText(e.target.value)}
-                placeholder="تفاصيل إضافية (اختياري)"
-                rows={2}
-                className="w-full text-xs border border-gray-200 rounded-lg px-2.5 py-1.5 outline-none resize-none"
-              />
-              {cancelError && (
-                <p className="text-xs text-red-600 bg-red-50 rounded-lg p-2">{cancelError}</p>
-              )}
-              <div className="flex gap-2">
-                <button
-                  onClick={() => cancelMutation.mutate()}
-                  disabled={cancelMutation.isPending}
-                  className="flex-1 flex items-center justify-center gap-2 bg-red-600 text-white font-bold py-2.5 rounded-xl hover:bg-red-700 transition-colors disabled:opacity-60 text-sm"
-                >
-                  {cancelMutation.isPending && <Loader2 className="w-4 h-4 animate-spin" />}
-                  <span>تأكيد الإلغاء</span>
-                </button>
-                <button
-                  onClick={() => setShowCancelForm(false)}
-                  className="flex-1 bg-gray-50 text-gray-700 font-bold py-2.5 rounded-xl hover:bg-gray-100 transition-colors text-sm"
-                >
-                  تراجع
-                </button>
-              </div>
-            </div>
           )}
         </div>
       </div>
