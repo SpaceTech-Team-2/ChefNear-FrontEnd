@@ -1,264 +1,334 @@
 import { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
-  LayoutGrid,
-  List,
-  Filter,
   Clock,
   Check,
   X,
-  Printer,
   Truck,
-  Leaf,
+  PackageCheck,
+  ChefHat,
+  Loader2,
+  RefreshCcw,
 } from "lucide-react";
+import {
+  getMyOrders,
+  acceptOrder,
+  startPreparingOrder,
+  markOrderReady,
+  markOrderDelivered,
+  cancelOrder,
+} from "../../../services/api";
 
-interface Order {
-  id: string;
-  customerName: string;
-  customerAvatar: string;
-  items: string[];
-  notes?: string[];
-  status: "جديد" | "جاري التحضير" | "جاهز للتوصيل";
-  estimatedTime?: string;
-  remainingTime?: string;
-  progress?: number;
-  driverStatus?: string;
+// ملحوظة: رد GET /Orders لسه مش موثّق رسميًا في الـ swagger (بيرجع "OK" بس من
+// غير schema)، فبنقرأ كل حقل بشكل دفاعي من أكتر من اسم محتمل بدل ما نفترض
+// شكل ثابت. لما الـ backend يوثّق شكل الرد بالظبط، ينفع نستبدل الدوال دي
+// بقراءة مباشرة.
+interface RawOrder {
+  [key: string]: any;
 }
 
-const activeOrdersData: Order[] = [
-  {
-    id: "#ORD-8942",
-    customerName: "سارة محمد",
-    customerAvatar:
-      "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=100&q=80",
-    items: ["مجبوس دجاج تقليدي"],
-    notes: ["بدون مكسرات", "إضافة دقوس حار"],
-    status: "جديد",
-    estimatedTime: "45 دقيقة",
-  },
-  {
-    id: "#ORD-8941",
-    customerName: "خالد عبدالله",
-    customerAvatar:
-      "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=100&q=80",
-    items: ["ورق عنب بالزيت وليمون (عائلي)"],
-    notes: ["زيادة ليمون"],
-    status: "جاري التحضير",
-    remainingTime: "12:05",
-    progress: 60,
-  },
-  {
-    id: "#ORD-8939",
-    customerName: "عمر فهد",
-    customerAvatar:
-      "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=100&q=80",
-    items: ["صينية مسخن دجاج"],
-    status: "جاهز للتوصيل",
-    driverStatus: "المندوب في الطريق",
-  },
-];
+function getOrderId(o: RawOrder): string {
+  return o.id ?? o.orderId ?? "";
+}
+function getOrderCode(o: RawOrder): string {
+  const id = getOrderId(o);
+  return o.orderNumber ?? o.code ?? (id ? `#${id.slice(0, 8)}` : "طلب");
+}
+function getCustomerName(o: RawOrder): string {
+  return o.customerName ?? o.clientName ?? o.userName ?? o.client?.displayName ?? "عميل";
+}
+function getStatus(o: RawOrder): string {
+  return o.status ?? o.orderStatus ?? "";
+}
+function getItems(o: RawOrder): { name: string; quantity: number }[] {
+  const raw = o.items ?? o.orderItems ?? o.dishes ?? [];
+  if (!Array.isArray(raw)) return [];
+  return raw.map((it: any) => ({
+    name: it.dishName ?? it.name ?? it.dish?.name ?? "صنف",
+    quantity: it.quantity ?? 1,
+  }));
+}
+function getTotal(o: RawOrder): number | undefined {
+  return o.total ?? o.totalPrice ?? o.totalAmount ?? undefined;
+}
+
+const statusLabels: Record<string, string> = {
+  Pending: "بانتظار القبول",
+  Accepted: "مقبول",
+  Preparing: "جاري التحضير",
+  Ready: "جاهز للتوصيل",
+  Delivered: "تم التسليم",
+  Cancelled: "ملغي",
+};
 
 export default function ActiveOrders() {
-  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+  const queryClient = useQueryClient();
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [prepModalOrder, setPrepModalOrder] = useState<string | null>(null);
+  const [readyModalOrder, setReadyModalOrder] = useState<string | null>(null);
+  const [cookingTime, setCookingTime] = useState("00:30:00");
+  const [deliveryTime, setDeliveryTime] = useState("00:20:00");
+  const [deliveryFee, setDeliveryFee] = useState("20");
+
+  const { data, isLoading, isError, refetch, isFetching } = useQuery({
+    queryKey: ["chef-orders"],
+    queryFn: () => getMyOrders({ IsActive: true, PageSize: 50 }),
+  });
+
+  const orders: RawOrder[] = data?.data ?? data ?? [];
+
+  const invalidate = () => queryClient.invalidateQueries({ queryKey: ["chef-orders"] });
+
+  const runAction = useMutation({
+    mutationFn: async (fn: () => Promise<any>) => fn(),
+    onSuccess: () => {
+      setActionError(null);
+      invalidate();
+    },
+    onError: (err: any) => {
+      setActionError(
+        err?.response?.data?.message || err?.message || "تعذر تنفيذ الإجراء، حاول تاني."
+      );
+    },
+  });
 
   return (
     <div dir="rtl" className="space-y-8 font-sans">
-      {/* Header & Controls */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-black text-gray-900">الطلبات النشطة</h1>
           <p className="text-sm text-gray-500 mt-1">
-            لديك 4 طلبات تتطلب الانتباه
+            {isLoading ? "جاري التحميل..." : `${orders.length} طلب نشط`}
           </p>
         </div>
+        <button
+          onClick={() => refetch()}
+          className="flex items-center gap-2 bg-white border border-rose-100/60 px-4 py-2 rounded-xl text-xs font-bold text-gray-700 hover:bg-rose-50/50 transition-colors shadow-sm"
+        >
+          <RefreshCcw className={`w-4 h-4 text-[#B34510] ${isFetching ? "animate-spin" : ""}`} />
+          <span>تحديث</span>
+        </button>
+      </div>
 
-        {/* Display Toggles & Filters */}
-        <div className="flex items-center gap-3">
-          <div className="flex items-center bg-[#FFEAE3]/50 border border-rose-100/60 p-1 rounded-xl">
-            <button
-              onClick={() => setViewMode("grid")}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                viewMode === "grid"
-                  ? "bg-amber-400 text-gray-900 shadow-sm"
-                  : "text-gray-500 hover:text-gray-800"
-              }`}
-            >
-              <LayoutGrid className="w-4 h-4" />
-              <span>شبكة</span>
-            </button>
-            <button
-              onClick={() => setViewMode("list")}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                viewMode === "list"
-                  ? "bg-amber-400 text-gray-900 shadow-sm"
-                  : "text-gray-500 hover:text-gray-800"
-              }`}
-            >
-              <List className="w-4 h-4" />
-              <span>قائمة</span>
-            </button>
-          </div>
-
-          <button className="flex items-center gap-2 bg-white border border-rose-100/60 px-4 py-2 rounded-xl text-xs font-bold text-gray-700 hover:bg-rose-50/50 transition-colors shadow-sm">
-            <Filter className="w-4 h-4 text-[#B34510]" />
-            <span>تصفية</span>
-          </button>
+      {actionError && (
+        <div className="text-xs text-red-600 bg-red-50 border border-red-100 rounded-xl p-3 text-center">
+          {actionError}
         </div>
-      </div>
+      )}
 
-      {/* Orders Cards Grid */}
+      {isLoading && (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="h-52 bg-white border border-rose-100/60 rounded-2xl animate-pulse" />
+          ))}
+        </div>
+      )}
+
+      {isError && (
+        <div className="text-center text-sm text-red-600 bg-red-50 border border-red-100 rounded-xl p-6">
+          تعذر تحميل الطلبات. تأكد إنك مسجل دخول كشيف وحاول تاني.
+        </div>
+      )}
+
+      {!isLoading && !isError && orders.length === 0 && (
+        <div className="text-center text-sm text-gray-500 bg-white border border-dashed border-rose-200 rounded-2xl p-12">
+          مفيش طلبات نشطة دلوقتي.
+        </div>
+      )}
+
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {activeOrdersData.map((order) => (
-          <div
-            key={order.id}
-            className="bg-white rounded-2xl border border-rose-100/60 p-5 shadow-sm flex flex-col justify-between space-y-6 relative overflow-hidden"
-          >
-            {/* Top Indicator Line */}
+        {orders.map((order) => {
+          const id = getOrderId(order);
+          const status = getStatus(order);
+          const items = getItems(order);
+          const total = getTotal(order);
+
+          return (
             <div
-              className={`absolute top-0 right-0 left-0 h-1.5 ${
-                order.status === "جديد"
-                  ? "bg-amber-400"
-                  : order.status === "جاري التحضير"
-                  ? "bg-emerald-600"
-                  : "bg-emerald-700"
-              }`}
-            />
+              key={id}
+              className="bg-white rounded-2xl border border-rose-100/60 p-5 shadow-sm flex flex-col justify-between space-y-5 relative overflow-hidden"
+            >
+              <div className="absolute top-0 right-0 left-0 h-1.5 bg-[#B34510]" />
 
-            {/* Order Header */}
-            <div className="space-y-4">
-              <div className="flex items-start justify-between">
-                {/* Status Badge */}
-                {order.status === "جديد" && (
-                  <span className="bg-amber-100 text-amber-800 text-xs px-3 py-1 rounded-full font-bold flex items-center gap-1">
-                    <Clock className="w-3.5 h-3.5" />
-                    <span>جديد</span>
-                  </span>
-                )}
-                {order.status === "جاري التحضير" && (
-                  <span className="text-emerald-600 text-xs font-bold">
-                    جاري التحضير
-                  </span>
-                )}
-                {order.status === "جاهز للتوصيل" && (
-                  <span className="bg-emerald-700 text-white text-xs px-3 py-1 rounded-full font-bold flex items-center gap-1">
-                    <Truck className="w-3.5 h-3.5" />
-                    <span>جاهز للتوصيل</span>
-                  </span>
-                )}
-
-                {/* Customer Info */}
-                <div className="text-left">
-                  <div className="flex items-center gap-2">
-                    <img
-                      src={order.customerAvatar}
-                      alt={order.customerName}
-                      className="w-8 h-8 rounded-full object-cover"
-                    />
-                    <span className="font-bold text-gray-800 text-sm">
-                      {order.customerName}
-                    </span>
-                  </div>
-                  <span className="text-xs text-gray-400 block mt-0.5">
-                    {order.id}
-                  </span>
+              <div className="space-y-3">
+                <div className="flex items-start justify-between gap-2">
+                  <span className="font-bold text-gray-800 text-sm">{getCustomerName(order)}</span>
+                  <span className="text-xs text-gray-400">{getOrderCode(order)}</span>
                 </div>
+
+                {status && (
+                  <span className="inline-flex items-center gap-1.5 bg-amber-50 text-amber-800 text-[11px] px-2.5 py-1 rounded-full font-bold">
+                    <Clock className="w-3 h-3" />
+                    {statusLabels[status] ?? status}
+                  </span>
+                )}
+
+                <div className="space-y-1">
+                  {items.length > 0 ? (
+                    items.map((it, idx) => (
+                      <div key={idx} className="text-sm text-gray-700">
+                        {it.name} × {it.quantity}
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-xs text-gray-400">تفاصيل الأصناف غير متاحة من الرد.</p>
+                  )}
+                </div>
+
+                {typeof total === "number" && (
+                  <div className="text-sm font-black text-[#B34510]">{total} ج.م</div>
+                )}
               </div>
 
-              {/* Progress Bar for Preparing Status */}
-              {order.status === "جاري التحضير" && (
-                <div className="w-full bg-gray-100 h-2 rounded-full overflow-hidden">
-                  <div
-                    className="bg-emerald-600 h-full rounded-full transition-all duration-500"
-                    style={{ width: `${order.progress || 50}%` }}
-                  />
-                </div>
-              )}
+              <div className="pt-4 border-t border-gray-100 flex flex-wrap items-center gap-2">
+                <button
+                  onClick={() => runAction.mutate(() => acceptOrder(id))}
+                  disabled={runAction.isPending}
+                  className="flex items-center gap-1.5 bg-[#B34510] hover:bg-[#A03E0F] text-white px-3.5 py-2 rounded-xl font-bold text-xs transition-colors disabled:opacity-50"
+                >
+                  <Check className="w-3.5 h-3.5" />
+                  <span>قبول</span>
+                </button>
 
-              {/* Order Items & Notes */}
-              <div className="space-y-2 pt-2">
-                {order.items.map((item, idx) => (
-                  <h3 key={idx} className="font-bold text-gray-800 text-base">
-                    {item}
-                  </h3>
-                ))}
+                <button
+                  onClick={() => setPrepModalOrder(id)}
+                  disabled={runAction.isPending}
+                  className="flex items-center gap-1.5 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 px-3.5 py-2 rounded-xl font-bold text-xs transition-colors disabled:opacity-50"
+                >
+                  <ChefHat className="w-3.5 h-3.5" />
+                  <span>بدء التحضير</span>
+                </button>
 
-                {order.notes && order.notes.length > 0 && (
-                  <div className="space-y-1">
-                    {order.notes.map((note, idx) => (
-                      <div
-                        key={idx}
-                        className="flex items-center gap-1.5 text-xs text-emerald-700 font-medium"
-                      >
-                        <Leaf className="w-3.5 h-3.5 text-emerald-600" />
-                        <span>{note}</span>
-                      </div>
-                    ))}
-                  </div>
-                )}
+                <button
+                  onClick={() => setReadyModalOrder(id)}
+                  disabled={runAction.isPending}
+                  className="flex items-center gap-1.5 bg-blue-50 text-blue-700 hover:bg-blue-100 px-3.5 py-2 rounded-xl font-bold text-xs transition-colors disabled:opacity-50"
+                >
+                  <Truck className="w-3.5 h-3.5" />
+                  <span>جاهز للتوصيل</span>
+                </button>
+
+                <button
+                  onClick={() => runAction.mutate(() => markOrderDelivered(id))}
+                  disabled={runAction.isPending}
+                  className="flex items-center gap-1.5 bg-gray-50 text-gray-700 hover:bg-gray-100 px-3.5 py-2 rounded-xl font-bold text-xs transition-colors disabled:opacity-50"
+                >
+                  <PackageCheck className="w-3.5 h-3.5" />
+                  <span>تم التسليم</span>
+                </button>
+
+                <button
+                  onClick={() =>
+                    runAction.mutate(() =>
+                      cancelOrder(id, {
+                        reasonType: "ChefKitchenBusy",
+                        reasonFreeText: "اعتذار من الشيف",
+                      })
+                    )
+                  }
+                  disabled={runAction.isPending}
+                  className="flex items-center gap-1.5 border border-rose-200 text-rose-500 hover:bg-rose-50 px-3.5 py-2 rounded-xl font-bold text-xs transition-colors disabled:opacity-50"
+                >
+                  <X className="w-3.5 h-3.5" />
+                  <span>إلغاء</span>
+                </button>
               </div>
             </div>
+          );
+        })}
+      </div>
 
-            {/* Order Footer Actions */}
-            <div className="pt-4 border-t border-gray-100">
-              {order.status === "جديد" && (
-                <div className="flex items-center justify-between gap-3">
-                  <div className="text-xs">
-                    <span className="text-gray-400 block">
-                      وقت التحضير المتوقع
-                    </span>
-                    <span className="font-bold text-gray-800 text-sm">
-                      {order.estimatedTime}
-                    </span>
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    <button className="p-2.5 rounded-xl border border-rose-200 text-rose-500 hover:bg-rose-50 transition-colors">
-                      <X className="w-4 h-4" />
-                    </button>
-                    <button className="bg-[#B34510] hover:bg-[#A03E0F] text-white px-5 py-2.5 rounded-xl font-bold text-sm flex items-center gap-1.5 transition-colors shadow-sm">
-                      <Check className="w-4 h-4" />
-                      <span>قبول</span>
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {order.status === "جاري التحضير" && (
-                <div className="flex items-center justify-between gap-3">
-                  <button className="bg-rose-50 text-[#B34510] hover:bg-rose-100 px-4 py-2.5 rounded-xl text-xs font-bold transition-colors">
-                    تحديث الحالة
-                  </button>
-
-                  <div className="text-left">
-                    <span className="text-[10px] text-gray-400 block">
-                      الوقت المتبقي
-                    </span>
-                    <div className="flex items-center gap-1 text-emerald-600 font-black text-lg dir-ltr">
-                      <Clock className="w-4 h-4" />
-                      <span>{order.remainingTime}</span>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {order.status === "جاهز للتوصيل" && (
-                <div className="flex items-center justify-between gap-3">
-                  <button className="bg-[#795548] hover:bg-[#5D4037] text-white px-4 py-2.5 rounded-xl text-xs font-bold flex items-center gap-2 transition-colors">
-                    <Printer className="w-4 h-4" />
-                    <span>طباعة الفاتورة</span>
-                  </button>
-
-                  <div className="text-left text-xs">
-                    <span className="text-gray-400 block">المندوب</span>
-                    <span className="font-bold text-gray-700">
-                      {order.driverStatus}
-                    </span>
-                  </div>
-                </div>
-              )}
+      {/* Modal: بدء التحضير (محتاج وقت تحضير متوقع) */}
+      {prepModalOrder && (
+        <div className="fixed inset-0 bg-black/30 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-2xl p-6 w-full max-w-sm space-y-4" dir="rtl">
+            <h3 className="font-black text-gray-900">وقت التحضير المتوقع</h3>
+            <input
+              type="text"
+              value={cookingTime}
+              onChange={(e) => setCookingTime(e.target.value)}
+              placeholder="HH:mm:ss"
+              className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none"
+            />
+            <div className="flex gap-2">
+              <button
+                onClick={() => setPrepModalOrder(null)}
+                className="flex-1 py-2.5 rounded-xl text-sm font-bold bg-gray-50 text-gray-700"
+              >
+                إلغاء
+              </button>
+              <button
+                onClick={() => {
+                  runAction.mutate(() =>
+                    startPreparingOrder(prepModalOrder, { estimatedCookingTime: cookingTime })
+                  );
+                  setPrepModalOrder(null);
+                }}
+                className="flex-1 py-2.5 rounded-xl text-sm font-bold bg-[#B34510] text-white"
+              >
+                تأكيد
+              </button>
             </div>
           </div>
-        ))}
-      </div>
+        </div>
+      )}
+
+      {/* Modal: جاهز للتوصيل (محتاج وقت توصيل ورسوم) */}
+      {readyModalOrder && (
+        <div className="fixed inset-0 bg-black/30 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-2xl p-6 w-full max-w-sm space-y-4" dir="rtl">
+            <h3 className="font-black text-gray-900">تفاصيل التوصيل</h3>
+            <div className="space-y-2">
+              <label className="text-xs font-bold text-gray-600">وقت التوصيل المتوقع</label>
+              <input
+                type="text"
+                value={deliveryTime}
+                onChange={(e) => setDeliveryTime(e.target.value)}
+                placeholder="HH:mm:ss"
+                className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none"
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-xs font-bold text-gray-600">رسوم التوصيل (ج.م)</label>
+              <input
+                type="number"
+                value={deliveryFee}
+                onChange={(e) => setDeliveryFee(e.target.value)}
+                className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none"
+              />
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setReadyModalOrder(null)}
+                className="flex-1 py-2.5 rounded-xl text-sm font-bold bg-gray-50 text-gray-700"
+              >
+                إلغاء
+              </button>
+              <button
+                onClick={() => {
+                  runAction.mutate(() =>
+                    markOrderReady(readyModalOrder, {
+                      estimatedDeliveryTime: deliveryTime,
+                      deliveryFee: Number(deliveryFee) || 0,
+                    })
+                  );
+                  setReadyModalOrder(null);
+                }}
+                className="flex-1 py-2.5 rounded-xl text-sm font-bold bg-[#B34510] text-white"
+              >
+                تأكيد
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {runAction.isPending && (
+        <div className="fixed bottom-6 left-6 bg-white shadow-lg border border-rose-100 rounded-xl px-4 py-2.5 flex items-center gap-2 text-xs font-bold text-gray-700">
+          <Loader2 className="w-4 h-4 animate-spin text-[#B34510]" />
+          <span>جاري التنفيذ...</span>
+        </div>
+      )}
     </div>
   );
 }

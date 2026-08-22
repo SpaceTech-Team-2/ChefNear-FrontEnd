@@ -190,13 +190,13 @@ export default function HomeFeed() {
               اختيارات طازجة من أمهر الطهاة في منطقتك
             </p>
           </div>
-          <a
-            href="#"
+          <Link
+            to="/chefs"
             className="flex items-center gap-1 text-xs text-amber-800 font-bold hover:underline"
           >
             <span>عرض الكل</span>
             <ArrowLeft className="w-4 h-4" />
-          </a>
+          </Link>
         </div>
 
         {/* Dish Cards Grid */}

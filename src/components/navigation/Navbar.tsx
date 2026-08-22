@@ -12,9 +12,10 @@ import {
 import { Bars3Icon, XMarkIcon } from "@heroicons/react/24/outline";
 import { Search, ShoppingCart, Heart, Bell, ChevronDown } from "lucide-react"; // استيراد الأيقونات الجديدة
 import { Link, useNavigate } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useCart } from "../../services/CartContext";
-import { getMyProfile } from "../../services/api";
+import { getMyProfile, getNotifications, deleteNotification } from "../../services/api";
+import { logout } from "../../services/auth";
 
 const navLinks = [
   { name: "اكتشف الطهاة", href: "/chefs", active: true },
@@ -39,8 +40,23 @@ export default function Navbar() {
   const profile = profileRes?.data;
   const displayName = profile?.displayName || profile?.firstName || "حسابي";
 
-  const handleLogout = () => {
-    localStorage.removeItem("token");
+  const queryClient = useQueryClient();
+  const { data: notificationsRes } = useQuery({
+    queryKey: ["notifications"],
+    queryFn: () => getNotifications({ pageSize: 10 }),
+    enabled: isLoggedIn,
+    refetchInterval: 60000,
+  });
+  const notifications: any[] = notificationsRes?.data ?? [];
+  const hasUnread = notifications.some((n) => n.isRead === false || n.read === false);
+
+  const deleteNotificationMutation = useMutation({
+    mutationFn: (id: string) => deleteNotification(id),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["notifications"] }),
+  });
+
+  const handleLogout = async () => {
+    await logout();
     setMobileMenuOpen(false);
     navigate("/login");
   };
@@ -132,10 +148,39 @@ export default function Navbar() {
             // حالة تسجيل الدخول: عرض الأيقونات وصورة الملف الشخصي
             <>
               <div className="flex items-center gap-3.5 text-[#5F2108]">
-                <button className="relative group p-1.5 hover:bg-[#FFEAE3] rounded-full transition-colors">
-                  <Bell className="size-6 stroke-[1.5]" />
-                  <span className="absolute top-1 right-1 size-2 bg-red-500 rounded-full border border-white"></span>
-                </button>
+                <Popover className="relative">
+                  <PopoverButton className="relative group p-1.5 hover:bg-[#FFEAE3] rounded-full transition-colors outline-none">
+                    <Bell className="size-6 stroke-[1.5]" />
+                    {hasUnread && (
+                      <span className="absolute top-1 right-1 size-2 bg-red-500 rounded-full border border-white"></span>
+                    )}
+                  </PopoverButton>
+                  <PopoverPanel className="absolute left-0 z-10 mt-3 w-72 rounded-xl bg-white p-2 shadow-lg ring-1 ring-black/5 text-sm max-h-96 overflow-y-auto">
+                    {notifications.length === 0 && (
+                      <p className="text-xs text-gray-400 text-center py-6">مفيش إشعارات جديدة</p>
+                    )}
+                    {notifications.map((n, idx) => (
+                      <div
+                        key={n.id ?? idx}
+                        className="flex items-start gap-2 px-3 py-2.5 hover:bg-gray-50 rounded-lg group"
+                      >
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs text-gray-700 leading-relaxed">
+                            {n.message ?? n.title ?? n.body ?? "إشعار جديد"}
+                          </p>
+                        </div>
+                        {n.id && (
+                          <button
+                            onClick={() => deleteNotificationMutation.mutate(n.id)}
+                            className="opacity-0 group-hover:opacity-100 text-[10px] text-gray-400 hover:text-red-500 transition-opacity shrink-0"
+                          >
+                            حذف
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                  </PopoverPanel>
+                </Popover>
                 <button className="p-1.5 hover:bg-[#FFEAE3] rounded-full transition-colors">
                   <Heart className="size-6 stroke-[1.5]" />
                 </button>
@@ -161,6 +206,18 @@ export default function Navbar() {
                     className="block px-4 py-2 hover:bg-gray-50 rounded-lg text-gray-700"
                   >
                     طلباتي
+                  </Link>
+                  <Link
+                    to="/addresses"
+                    className="block px-4 py-2 hover:bg-gray-50 rounded-lg text-gray-700"
+                  >
+                    العناوين
+                  </Link>
+                  <Link
+                    to="/preferences"
+                    className="block px-4 py-2 hover:bg-gray-50 rounded-lg text-gray-700"
+                  >
+                    تفضيلاتك
                   </Link>
                   <button
                     onClick={handleLogout}
@@ -274,6 +331,20 @@ export default function Navbar() {
                       className="-mx-3 block rounded-lg px-3 py-2 text-sm font-semibold text-[#5F2108] hover:bg-[#FFEAE3]"
                     >
                       طلباتي
+                    </Link>
+                    <Link
+                      to="/addresses"
+                      onClick={() => setMobileMenuOpen(false)}
+                      className="-mx-3 block rounded-lg px-3 py-2 text-sm font-semibold text-[#5F2108] hover:bg-[#FFEAE3]"
+                    >
+                      العناوين
+                    </Link>
+                    <Link
+                      to="/preferences"
+                      onClick={() => setMobileMenuOpen(false)}
+                      className="-mx-3 block rounded-lg px-3 py-2 text-sm font-semibold text-[#5F2108] hover:bg-[#FFEAE3]"
+                    >
+                      تفضيلاتك
                     </Link>
                     <button
                       onClick={handleLogout}

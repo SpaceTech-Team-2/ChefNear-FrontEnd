@@ -20,6 +20,7 @@ const DashboardOverview = lazy(() => import('../../features/chef-dashboard/pages
 const Order = lazy(() => import("../../features/chef-dashboard/pages/orders"));
 const ChefProfilePage = lazy(() => import("../../features/orders/ChefProfilePage"));
 const DishDetailsModal = lazy(() => import("../../features/orders/DishDetailsModal"));
+const ReviewsPage = lazy(() => import("../../features/auth/pages/Reviews"));
 
 const MenuManagement = lazy(
   () => import("../../features/chef-dashboard/pages/menu")
@@ -31,9 +32,12 @@ const SalesAnalytics = lazy(() => import("../../features/chef-dashboard/pages/Sa
 const ChefsList = lazy(() => import("../../features/discovery/ChefsList"));
 
 const ProfilePage = lazy(() => import("../../features/profile/ProfilePage"));
+const PreferencesPage = lazy(() => import("../../features/profile/PreferencesPage"));
+const AddressesPage = lazy(() => import("../../features/profile/AddressesPage"));
 const CartPage = lazy(() => import("../../features/cart/CartPage"));
 const OrdersHistoryPage = lazy(() => import("../../features/orders/OrdersHistoryPage"));
 const OrderTrackingPage = lazy(() => import("../../features/orders/OrderTrackingPage"));
+const CancelOrderPage = lazy(() => import("../../features/orders/CancelOrderPage"));
 const OrderConfirmationPage = lazy(() => import("../../features/orders/OrderConfirmationPage"));
 
 
@@ -132,6 +136,14 @@ export const router = createBrowserRouter([
         element: (
           <Suspense fallback={<div>جاري التحميل...</div>}>
             <DishDetailsModal />
+          </Suspense>
+        ),
+      },
+      {
+        path: "/DishDetailsModal/:id/reviews",
+        element: (
+          <Suspense fallback={<div>جاري التحميل...</div>}>
+            <ReviewsPage />
           </Suspense>
         ),
       },
@@ -250,6 +262,22 @@ export const router = createBrowserRouter([
         ),
       },
       {
+        path: "/preferences",
+        element: (
+          <Suspense fallback={<div>جاري التحميل...</div>}>
+            <PreferencesPage />
+          </Suspense>
+        ),
+      },
+      {
+        path: "/addresses",
+        element: (
+          <Suspense fallback={<div>جاري التحميل...</div>}>
+            <AddressesPage />
+          </Suspense>
+        ),
+      },
+      {
         path: "/orders",
         element: (
           <Suspense fallback={<div>جاري التحميل...</div>}>
@@ -262,6 +290,14 @@ export const router = createBrowserRouter([
         element: (
           <Suspense fallback={<div>جاري التحميل...</div>}>
             <OrderTrackingPage />
+          </Suspense>
+        ),
+      },
+      {
+        path: "/orders/:localId/cancel",
+        element: (
+          <Suspense fallback={<div>جاري التحميل...</div>}>
+            <CancelOrderPage />
           </Suspense>
         ),
       },

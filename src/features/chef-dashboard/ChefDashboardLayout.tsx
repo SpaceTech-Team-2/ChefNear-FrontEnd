@@ -13,6 +13,7 @@ import {
   Power,
 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
+import { logout } from "../../services/auth";
 
 const navItems = [
   { path: "/chef", label: "لوحة التحكم", icon: LayoutDashboard, end: true },
@@ -114,7 +115,10 @@ export default function ChefDashboardLayout() {
               <span>مركز المساعدة</span>
             </button>
             <button
-              onClick={() => navigate("/login")}
+              onClick={async () => {
+                await logout();
+                navigate("/login");
+              }}
               className="w-full flex items-center gap-2 p-2 rounded-lg hover:bg-rose-50 hover:text-rose-600 text-rose-500"
             >
               <LogOut className="w-4 h-4" />

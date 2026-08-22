@@ -1,169 +1,177 @@
-import React, { useState } from "react";
-import { Plus, Search, Edit2, Trash2, X, Upload } from "lucide-react";
-import {getCategories} from "../../../services/api";
+import { useState } from "react";
+import { Plus, Search, Edit2, Trash2, X, Loader2 } from "lucide-react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import {
+  getCategories,
+  getDishes,
+  getMyProfile,
+  createDish,
+  updateDish,
+  deleteDish,
+  type DishStatus,
+} from "../../../services/api";
 
-interface MenuItem {
-  id: number;
-  title: string;
-  description: string;
+interface Dish {
+  id: string;
+  name: string;
+  description?: string;
   price: number;
-  image: string;
-  category: string;
-  isAvailable: boolean;
+  categoryId?: string;
+  category?: string;
+  quantityAvailable?: number;
+  status?: DishStatus;
+  primaryImageUrl?: string;
+  chefId?: string;
+  chef?: { id?: string };
 }
 
-const initialMenuItems: MenuItem[] = [
-  {
-    id: 1,
-    title: "مندي لحم",
-    description:
-      "أرز مندي تقليدي مع لحم الغنم الطازج المطهو ببطء، يقدم مع صلصة الفلفل الحار.",
-    price: 85,
-    image:
-      "https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&w=600&q=80",
-    category: "الأطباق الرئيسية",
-    isAvailable: true,
-  },
-  {
-    id: 2,
-    title: "كنافة نابلسية",
-    description: "كنافة بالجبن النابلسي تقدم ساخنة مع القطر والفستق الحلبي.",
-    price: 35,
-    image:
-      "https://images.unsplash.com/photo-1587314168485-3236d6710814?auto=format&fit=crop&w=600&q=80",
-    category: "الحلويات",
-    isAvailable: false,
-  },
-];
-const response = await getCategories();
-
-const categories = [{ name: "الكل" }, ...response.data];
-
 export default function MenuManagement() {
+  const queryClient = useQueryClient();
   const [selectedCategory, setSelectedCategory] = useState("الكل");
   const [searchQuery, setSearchQuery] = useState("");
-  const [menuItems, setMenuItems] = useState<MenuItem[]>(initialMenuItems);
-
-  // حالة التحكم في الـ Modal
   const [isModalOpen, setIsModalOpen] = useState(false);
-
-  // حالة تحديد ما إذا كنا في وضع التعديل (يحمل ID الطبق) أم الإضافة (null)
-  const [editingDishId, setEditingDishId] = useState<number | null>(null);
-
-  // حالة نموذج الإضافة / التعديل
+  const [editingDishId, setEditingDishId] = useState<string | null>(null);
   const [dishForm, setDishForm] = useState({
-    chefId: "",
-    title: "",
+    name: "",
     description: "",
     price: "",
-    category: "أطباق رئيسية",
-    image: "",
+    quantityAvailable: "10",
+    categoryId: "",
   });
 
-  // فتح Modal للإضافة
+  const { data: categoriesRes } = useQuery({
+    queryKey: ["categories"],
+    queryFn: getCategories,
+  });
+  const categories = categoriesRes?.data ?? [];
+
+  const { data: profileRes } = useQuery({
+    queryKey: ["my-profile"],
+    queryFn: getMyProfile,
+  });
+  const myChefId = profileRes?.data?.id;
+
+  // ملحوظة: GET /Dishes مفيهوش فلتر "أطباقي أنا بس" موثّق في الـ swagger،
+  // فبنجيب صفحة كبيرة من الأطباق ونفلتر محليًا اللي chefId بتاعها بيطابق
+  // البروفايل الحالي. لو الـ backend ضاف endpoint مخصص لأطباق الشيف، الأفضل
+  // نستبدل الفلترة دي باستدعاء مباشر له.
+  const {
+    data: dishesRes,
+    isLoading: dishesLoading,
+    isError: dishesError,
+  } = useQuery({
+    queryKey: ["all-dishes-for-chef-filter"],
+    queryFn: () => getDishes({ PageSize: 100 }),
+    enabled: Boolean(myChefId),
+  });
+
+  const menuItems: Dish[] = (dishesRes?.data ?? []).filter((d: Dish) => {
+    const dishChefId = d.chefId ?? d.chef?.id;
+    return !dishChefId || dishChefId === myChefId;
+  });
+
+  const invalidateDishes = () =>
+    queryClient.invalidateQueries({ queryKey: ["all-dishes-for-chef-filter"] });
+
+  const [formError, setFormError] = useState<string | null>(null);
+
+  const createMutation = useMutation({
+    mutationFn: () =>
+      createDish({
+        categoryId: dishForm.categoryId,
+        name: dishForm.name,
+        description: dishForm.description,
+        price: Number(dishForm.price),
+        quantityAvailable: Number(dishForm.quantityAvailable) || 0,
+      }),
+    onSuccess: () => {
+      setIsModalOpen(false);
+      invalidateDishes();
+    },
+    onError: (err: any) =>
+      setFormError(err?.response?.data?.message || "تعذر حفظ الطبق، حاول تاني."),
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: () =>
+      updateDish(editingDishId as string, {
+        categoryId: dishForm.categoryId,
+        name: dishForm.name,
+        description: dishForm.description,
+        price: Number(dishForm.price),
+        quantityAvailable: Number(dishForm.quantityAvailable) || 0,
+        status: "Available",
+      }),
+    onSuccess: () => {
+      setIsModalOpen(false);
+      invalidateDishes();
+    },
+    onError: (err: any) =>
+      setFormError(err?.response?.data?.message || "تعذر تحديث الطبق، حاول تاني."),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => deleteDish(id),
+    onSuccess: () => invalidateDishes(),
+  });
+
   const handleOpenAddModal = () => {
+    setFormError(null);
     setEditingDishId(null);
     setDishForm({
-      chefId: localStorage.getItem("token") || "",
-      title: "",
+      name: "",
       description: "",
       price: "",
-      category: "أطباق رئيسية",
-      image: "",
+      quantityAvailable: "10",
+      categoryId: categories[0]?.id ?? "",
     });
     setIsModalOpen(true);
   };
 
-  // فتح Modal للتعديل بتعبئة بيانات الطبق المحدد
-  const handleOpenEditModal = (item: MenuItem) => {
+  const handleOpenEditModal = (item: Dish) => {
+    setFormError(null);
     setEditingDishId(item.id);
     setDishForm({
-      chefId: localStorage.getItem("token") || "",
-      title: item.title,
-      description: item.description,
-      price: item.price.toString(),
-      category: item.category,
-      image: item.image,
+      name: item.name,
+      description: item.description ?? "",
+      price: String(item.price),
+      quantityAvailable: String(item.quantityAvailable ?? 10),
+      categoryId: item.categoryId ?? categories[0]?.id ?? "",
     });
     setIsModalOpen(true);
   };
 
-  const toggleAvailability = (id: number) => {
-    setMenuItems((prev) =>
-      prev.map((item) =>
-        item.id === id ? { ...item, isAvailable: !item.isAvailable } : item
-      )
-    );
-  };
-
-  const handleDelete = (id: number) => {
-    setMenuItems((prev) => prev.filter((item) => item.id !== id));
-  };
-
-  // حفظ التغيرات (سواء إضافة جديد أو تعديل طبق قائم)
   const handleSaveDish = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!dishForm.title || !dishForm.price) return;
-
-    if (editingDishId !== null) {
-      // تعديل طبق موصوف سابقاً
-      setMenuItems((prev) =>
-        prev.map((item) =>
-          item.id === editingDishId
-            ? {
-                ...item,
-                title: dishForm.title,
-                description: dishForm.description || "لا يوجد وصف متاح.",
-                price: Number(dishForm.price),
-                category: dishForm.category,
-                image:
-                  dishForm.image ||
-                  "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=600&q=80",
-              }
-            : item
-        )
-      );
-    } else {
-      // إضافة طبق جديد
-      const newDish: MenuItem = {
-        id: Date.now(),
-        title: dishForm.title,
-        description: dishForm.description || "لا يوجد وصف متاح.",
-        price: Number(dishForm.price),
-        category: dishForm.category,
-        image:
-          dishForm.image ||
-          "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=600&q=80",
-        isAvailable: true,
-      };
-      setMenuItems([newDish, ...menuItems]);
+    setFormError(null);
+    if (!dishForm.name || !dishForm.price || !dishForm.categoryId) {
+      setFormError("من فضلك املأ اسم الطبق والسعر والتصنيف.");
+      return;
     }
-
-    setIsModalOpen(false);
+    if (editingDishId !== null) {
+      updateMutation.mutate();
+    } else {
+      createMutation.mutate();
+    }
   };
 
   const filteredItems = menuItems.filter((item) => {
-
-    
-    const matchesCategory =
-      selectedCategory === "الكل" || item.category === selectedCategory;
-      
+    const categoryName =
+      categories.find((c: any) => c.id === item.categoryId)?.name ?? item.category;
+    const matchesCategory = selectedCategory === "الكل" || categoryName === selectedCategory;
     const matchesSearch =
-      item.title.includes(searchQuery) ||
-      item.description.includes(searchQuery);
+      item.name?.includes(searchQuery) || item.description?.includes(searchQuery);
     return matchesCategory && matchesSearch;
-    
   });
+
+  const isSaving = createMutation.isPending || updateMutation.isPending;
 
   return (
     <div dir="rtl" className="space-y-8 font-sans pb-10">
-      {/* Header Section */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-black text-gray-900">إدارة القائمة</h1>
-          <p className="text-sm text-gray-500 mt-1">
-            قم بإدارة أطباقك، وأسعارك، وتوافرها.
-          </p>
+          <p className="text-sm text-gray-500 mt-1">قم بإدارة أطباقك، وأسعارك، وتوافرها.</p>
         </div>
 
         <button
@@ -175,10 +183,19 @@ export default function MenuManagement() {
         </button>
       </div>
 
-      {/* Controls Bar */}
       <div className="flex flex-col-reverse md:flex-row items-center justify-between gap-4">
         <div className="flex items-center gap-2 overflow-x-auto w-full md:w-auto pb-1 scrollbar-none">
-          {categories.map((cat) => (
+          <button
+            onClick={() => setSelectedCategory("الكل")}
+            className={`px-5 py-2 rounded-full text-xs font-bold whitespace-nowrap transition-all ${
+              selectedCategory === "الكل"
+                ? "bg-[#B34510] text-white shadow-sm"
+                : "bg-amber-100/60 text-amber-900 hover:bg-amber-100"
+            }`}
+          >
+            الكل
+          </button>
+          {categories.map((cat: any) => (
             <button
               key={cat.id}
               onClick={() => setSelectedCategory(cat.name)}
@@ -205,96 +222,105 @@ export default function MenuManagement() {
         </div>
       </div>
 
-      {/* Menu Cards Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-        {/* Placeholder Add Card */}
-        <button
-          onClick={handleOpenAddModal}
-          className="bg-rose-50/30 border-2 border-dashed border-rose-200/80 rounded-2xl min-h-[360px] flex flex-col items-center justify-center gap-3 text-gray-400 hover:text-[#B34510] hover:border-[#B34510] hover:bg-rose-50/60 transition-all group"
-        >
-          <div className="w-12 h-12 rounded-full bg-white shadow-sm flex items-center justify-center group-hover:scale-110 transition-transform">
-            <Plus className="w-6 h-6 text-gray-600 group-hover:text-[#B34510]" />
-          </div>
-          <span className="text-sm font-bold text-gray-600 group-hover:text-[#B34510]">
-            إضافة طبق جديد
-          </span>
-        </button>
+      {dishesLoading && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          {[1, 2, 3, 4].map((i) => (
+            <div key={i} className="h-[360px] bg-white border border-rose-100/60 rounded-2xl animate-pulse" />
+          ))}
+        </div>
+      )}
 
-        {/* Dish Items */}
-        {filteredItems.map((item) => (
-          <div
-            key={item.id}
-            className="bg-white rounded-2xl border border-rose-100/60 shadow-sm overflow-hidden flex flex-col justify-between hover:shadow-md transition-shadow"
+      {dishesError && (
+        <div className="text-center text-sm text-red-600 bg-red-50 border border-red-100 rounded-xl p-6">
+          تعذر تحميل قائمة الأطباق. تأكد إنك مسجل دخول كشيف وحاول تاني.
+        </div>
+      )}
+
+      {!dishesLoading && !dishesError && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          <button
+            onClick={handleOpenAddModal}
+            className="bg-rose-50/30 border-2 border-dashed border-rose-200/80 rounded-2xl min-h-[360px] flex flex-col items-center justify-center gap-3 text-gray-400 hover:text-[#B34510] hover:border-[#B34510] hover:bg-rose-50/60 transition-all group"
           >
-            <div>
-              <div className="relative h-44 w-full">
-                <img
-                  src={item.image}
-                  alt={item.title}
-                  className="w-full h-full object-cover"
-                />
+            <div className="w-12 h-12 rounded-full bg-white shadow-sm flex items-center justify-center group-hover:scale-110 transition-transform">
+              <Plus className="w-6 h-6 text-gray-600 group-hover:text-[#B34510]" />
+            </div>
+            <span className="text-sm font-bold text-gray-600 group-hover:text-[#B34510]">
+              إضافة طبق جديد
+            </span>
+          </button>
 
-                <button
-                  onClick={() => toggleAvailability(item.id)}
-                  className={`absolute top-3 right-3 w-12 h-6 rounded-full p-1 transition-colors duration-200 ease-in-out ${
-                    item.isAvailable ? "bg-emerald-600" : "bg-gray-300"
-                  }`}
-                >
-                  <div
-                    className={`w-4 h-4 rounded-full bg-white shadow-md transform transition-transform duration-200 ease-in-out ${
-                      item.isAvailable ? "-translate-x-6" : "translate-x-0"
-                    }`}
-                  />
-                </button>
-              </div>
-
-              <div className="p-4 space-y-2">
-                <div className="flex items-center justify-between">
-                  <h3 className="font-bold text-gray-900 text-base">
-                    {item.title}
-                  </h3>
-                  <div className="text-amber-900 font-extrabold text-sm">
-                    {item.price}{" "}
-                    <span className="text-xs font-normal">درهم</span>
-                  </div>
+          {filteredItems.map((item) => (
+            <div
+              key={item.id}
+              className="bg-white rounded-2xl border border-rose-100/60 shadow-sm overflow-hidden flex flex-col justify-between hover:shadow-md transition-shadow"
+            >
+              <div>
+                <div className="relative h-44 w-full bg-rose-50">
+                  {item.primaryImageUrl && (
+                    <img
+                      src={item.primaryImageUrl}
+                      alt={item.name}
+                      className="w-full h-full object-cover"
+                    />
+                  )}
+                  {item.status && (
+                    <span
+                      className={`absolute top-3 right-3 text-[10px] font-bold px-2.5 py-1 rounded-full ${
+                        item.status === "Available"
+                          ? "bg-emerald-600 text-white"
+                          : "bg-gray-400 text-white"
+                      }`}
+                    >
+                      {item.status === "Available" ? "متاح" : "غير متاح"}
+                    </span>
+                  )}
                 </div>
 
-                <p className="text-xs text-gray-400 leading-relaxed line-clamp-3">
-                  {item.description}
-                </p>
+                <div className="p-4 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <h3 className="font-bold text-gray-900 text-base">{item.name}</h3>
+                    <div className="text-amber-900 font-extrabold text-sm">
+                      {item.price} <span className="text-xs font-normal">ج.م</span>
+                    </div>
+                  </div>
+                  <p className="text-xs text-gray-400 leading-relaxed line-clamp-3">
+                    {item.description}
+                  </p>
+                </div>
+              </div>
+
+              <div className="p-4 pt-0 flex items-center gap-2">
+                <button
+                  onClick={() => handleOpenEditModal(item)}
+                  className="flex-1 bg-rose-50/80 hover:bg-rose-100/80 text-gray-700 py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-colors"
+                >
+                  <Edit2 className="w-3.5 h-3.5 text-gray-600" />
+                  <span>تعديل</span>
+                </button>
+                <button
+                  onClick={() => deleteMutation.mutate(item.id)}
+                  disabled={deleteMutation.isPending}
+                  className="bg-rose-50/80 hover:bg-rose-100 text-rose-600 p-2 rounded-xl transition-colors disabled:opacity-50"
+                >
+                  {deleteMutation.isPending ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Trash2 className="w-4 h-4" />
+                  )}
+                </button>
               </div>
             </div>
+          ))}
+        </div>
+      )}
 
-            {/* Actions Card Footer */}
-            <div className="p-4 pt-0 flex items-center gap-2">
-              <button
-                onClick={() => handleOpenEditModal(item)}
-                className="flex-1 bg-rose-50/80 hover:bg-rose-100/80 text-gray-700 py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-colors"
-              >
-                <Edit2 className="w-3.5 h-3.5 text-gray-600" />
-                <span>تعديل</span>
-              </button>
-              <button
-                onClick={() => handleDelete(item.id)}
-                className="bg-rose-50/80 hover:bg-rose-100 text-rose-600 p-2 rounded-xl transition-colors"
-              >
-                <Trash2 className="w-4 h-4" />
-              </button>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {/* Modal Popup (إضافة / تعديل) */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-          <div className="bg-white rounded-3xl max-w-lg w-full p-6 shadow-xl border border-rose-100 space-y-6 relative animate-in fade-in zoom-in-95 duration-150">
-            {/* Modal Header */}
+          <div className="bg-white rounded-3xl max-w-lg w-full p-6 shadow-xl border border-rose-100 space-y-6 relative">
             <div className="flex items-center justify-between border-b border-gray-100 pb-4">
               <h2 className="text-xl font-bold text-gray-900">
-                {editingDishId !== null
-                  ? "تعديل بيانات الطبق"
-                  : "إضافة طبق جديد"}
+                {editingDishId !== null ? "تعديل بيانات الطبق" : "إضافة طبق جديد"}
               </h2>
               <button
                 onClick={() => setIsModalOpen(false)}
@@ -304,55 +330,48 @@ export default function MenuManagement() {
               </button>
             </div>
 
-            {/* Form */}
             <form onSubmit={handleSaveDish} className="space-y-4">
+              {formError && (
+                <p className="text-xs text-red-600 bg-red-50 border border-red-100 rounded-xl p-3 text-center">
+                  {formError}
+                </p>
+              )}
+
               <div className="space-y-1.5">
-                <label className="text-xs font-bold text-gray-600">
-                  اسم الطبق *
-                </label>
+                <label className="text-xs font-bold text-gray-600">اسم الطبق *</label>
                 <input
                   type="text"
                   required
                   placeholder="مثال: كبسة دجاج"
-                  value={dishForm.title}
-                  onChange={(e) =>
-                    setDishForm({ ...dishForm, title: e.target.value })
-                  }
+                  value={dishForm.name}
+                  onChange={(e) => setDishForm({ ...dishForm, name: e.target.value })}
                   className="w-full bg-[#FFF8F6] border border-rose-100 rounded-xl py-2.5 px-4 text-sm outline-none focus:border-[#B34510] text-gray-800"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-gray-600">
-                    السعر (درهم) *
-                  </label>
+                  <label className="text-xs font-bold text-gray-600">السعر (ج.م) *</label>
                   <input
                     type="number"
                     required
                     placeholder="0"
                     value={dishForm.price}
-                    onChange={(e) =>
-                      setDishForm({ ...dishForm, price: e.target.value })
-                    }
+                    onChange={(e) => setDishForm({ ...dishForm, price: e.target.value })}
                     className="w-full bg-[#FFF8F6] border border-rose-100 rounded-xl py-2.5 px-4 text-sm outline-none focus:border-[#B34510] text-gray-800"
                   />
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-gray-600">
-                    التصنيف *
-                  </label>
+                  <label className="text-xs font-bold text-gray-600">التصنيف *</label>
                   <select
-                    value={dishForm.category}
-                    onChange={(e) =>
-                      setDishForm({ ...dishForm, category: e.target.value })
-                    }
+                    value={dishForm.categoryId}
+                    onChange={(e) => setDishForm({ ...dishForm, categoryId: e.target.value })}
                     className="w-full bg-[#FFF8F6] border border-rose-100 rounded-xl py-2.5 px-4 text-sm outline-none focus:border-[#B34510] text-gray-800"
                   >
-                    {categories.slice(1).map((categorie) => (
-                      <option key={categorie.id} value={categorie.name}>
-                        {categorie.name}
+                    {categories.map((cat: any) => (
+                      <option key={cat.id} value={cat.id}>
+                        {cat.name}
                       </option>
                     ))}
                   </select>
@@ -360,36 +379,26 @@ export default function MenuManagement() {
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-xs font-bold text-gray-600">
-                  وصف الطبق
-                </label>
-                <textarea
-                  rows={3}
-                  placeholder="اكتب وصفاً قصيراً ومكونات الطبق..."
-                  value={dishForm.description}
+                <label className="text-xs font-bold text-gray-600">الكمية المتاحة</label>
+                <input
+                  type="number"
+                  value={dishForm.quantityAvailable}
                   onChange={(e) =>
-                    setDishForm({ ...dishForm, description: e.target.value })
+                    setDishForm({ ...dishForm, quantityAvailable: e.target.value })
                   }
-                  className="w-full bg-[#FFF8F6] border border-rose-100 rounded-xl p-3 text-sm outline-none focus:border-[#B34510] text-gray-800 resize-none"
+                  className="w-full bg-[#FFF8F6] border border-rose-100 rounded-xl py-2.5 px-4 text-sm outline-none focus:border-[#B34510] text-gray-800"
                 />
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-xs font-bold text-gray-600">
-                  رابط صورة الطبق (URL)
-                </label>
-                <div className="relative">
-                  <input
-                    type="url"
-                    placeholder="https://example.com/image.jpg"
-                    value={dishForm.image}
-                    onChange={(e) =>
-                      setDishForm({ ...dishForm, image: e.target.value })
-                    }
-                    className="w-full bg-[#FFF8F6] border border-rose-100 rounded-xl py-2.5 pr-4 pl-10 text-sm outline-none focus:border-[#B34510] text-gray-800 dir-ltr"
-                  />
-                  <Upload className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                </div>
+                <label className="text-xs font-bold text-gray-600">وصف الطبق</label>
+                <textarea
+                  rows={3}
+                  placeholder="اكتب وصفاً قصيراً ومكونات الطبق..."
+                  value={dishForm.description}
+                  onChange={(e) => setDishForm({ ...dishForm, description: e.target.value })}
+                  className="w-full bg-[#FFF8F6] border border-rose-100 rounded-xl p-3 text-sm outline-none focus:border-[#B34510] text-gray-800 resize-none"
+                />
               </div>
 
               <div className="flex items-center justify-end gap-3 pt-4 border-t border-gray-100">
@@ -402,9 +411,11 @@ export default function MenuManagement() {
                 </button>
                 <button
                   type="submit"
-                  className="bg-[#B34510] hover:bg-[#A03E0F] text-white px-6 py-2.5 rounded-xl text-xs font-bold transition-colors shadow-sm"
+                  disabled={isSaving}
+                  className="bg-[#B34510] hover:bg-[#A03E0F] text-white px-6 py-2.5 rounded-xl text-xs font-bold transition-colors shadow-sm disabled:opacity-60 flex items-center gap-2"
                 >
-                  {editingDishId !== null ? "تحديث الطبق" : "حفظ الطبق"}
+                  {isSaving && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                  <span>{editingDishId !== null ? "تحديث الطبق" : "حفظ الطبق"}</span>
                 </button>
               </div>
             </form>

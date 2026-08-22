@@ -8,8 +8,10 @@ import {
   ClipboardList,
   LogOut,
   MapPin,
+  Settings2,
 } from "lucide-react";
 import { getMyProfile } from "../../services/api";
+import { logout } from "../../services/auth";
 
 // شكل الرد لسه مش موثّق في الـ swagger (GET /api/v1/profile/me بيرجع "OK" بس من
 // غير schema)، فبنتعامل مع الحقول دي بشكل دفاعي (كلها اختيارية) بدل ما نفترض شكل ثابت.
@@ -44,8 +46,8 @@ export default function ProfilePage() {
     [profile?.firstName, profile?.lastName].filter(Boolean).join(" ") ||
     "مستخدم ChefNear";
 
-  const handleLogout = () => {
-    localStorage.removeItem("token");
+  const handleLogout = async () => {
+    await logout();
     navigate("/login");
   };
 
@@ -117,15 +119,31 @@ export default function ProfilePage() {
             </div>
           </Link>
 
-          <div className="flex items-center gap-3 bg-white rounded-2xl border border-rose-100/80 shadow-sm p-4 opacity-60 cursor-not-allowed">
+          <Link
+            to="/addresses"
+            className="flex items-center gap-3 bg-white rounded-2xl border border-rose-100/80 shadow-sm p-4 hover:shadow-md transition-shadow"
+          >
             <div className="w-10 h-10 rounded-full bg-amber-50 text-amber-800 flex items-center justify-center">
               <MapPin className="w-5 h-5" />
             </div>
             <div>
               <div className="font-bold text-gray-900 text-sm">العناوين</div>
-              <div className="text-xs text-gray-500">قريبًا</div>
+              <div className="text-xs text-gray-500">إدارة عناوين التوصيل</div>
             </div>
-          </div>
+          </Link>
+
+          <Link
+            to="/preferences"
+            className="flex items-center gap-3 bg-white rounded-2xl border border-rose-100/80 shadow-sm p-4 hover:shadow-md transition-shadow sm:col-span-2"
+          >
+            <div className="w-10 h-10 rounded-full bg-amber-50 text-amber-800 flex items-center justify-center">
+              <Settings2 className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="font-bold text-gray-900 text-sm">تفضيلاتك</div>
+              <div className="text-xs text-gray-500">الأطباق والإشعارات ونطاق البحث</div>
+            </div>
+          </Link>
         </div>
 
         <button

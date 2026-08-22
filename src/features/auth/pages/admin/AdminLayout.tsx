@@ -17,6 +17,7 @@ import { AdminSettingsView } from "./AdminSettingsView";
 interface NavItem {
   id: string;
   label: string;
+  shortLabel: string;
   icon: React.ReactNode;
 }
 
@@ -28,21 +29,25 @@ export const AdminLayout: React.FC = () => {
     {
       id: "users",
       label: "إدارة المستخدمين",
+      shortLabel: "المستخدمين",
       icon: <Users className="w-5 h-5" />,
     },
     {
       id: "disputes",
       label: "الشكاوى والنزاعات",
+      shortLabel: "الشكاوى",
       icon: <AlertTriangle className="w-5 h-5" />,
     },
     {
       id: "analytics",
       label: "التقارير والتحليلات",
+      shortLabel: "التحليلات",
       icon: <BarChart3 className="w-5 h-5" />,
     },
     {
       id: "settings",
       label: "إعدادات النظام",
+      shortLabel: "الإعدادات",
       icon: <Settings className="w-5 h-5" />,
     },
   ];
@@ -111,12 +116,30 @@ export const AdminLayout: React.FC = () => {
       </aside>
 
       {/* Main Content Area */}
-      <main className="flex-1 p-4 md:p-8 overflow-y-auto">
+      <main className="flex-1 p-4 md:p-8 pb-24 md:pb-8 overflow-y-auto">
         {activeTab === "users" && <AdminUsersView />}
         {activeTab === "disputes" && <AdminDisputesView />}
         {activeTab === "analytics" && <AdminAnalyticsView />}
         {activeTab === "settings" && <AdminSettingsView />}
       </main>
+
+      {/* Bottom Tab Bar (موبايل بس) */}
+      <nav className="md:hidden fixed inset-x-0 bottom-0 z-30 bg-slate-900 border-t border-slate-800 flex items-stretch">
+        {navItems.map((item) => (
+          <button
+            key={item.id}
+            onClick={() => setActiveTab(item.id)}
+            className={`flex-1 flex flex-col items-center justify-center gap-1 py-2.5 text-[10px] font-bold transition-colors ${
+              activeTab === item.id
+                ? "text-orange-500"
+                : "text-slate-400"
+            }`}
+          >
+            {item.icon}
+            <span className="leading-none">{item.shortLabel}</span>
+          </button>
+        ))}
+      </nav>
     </div>
   );
 };
