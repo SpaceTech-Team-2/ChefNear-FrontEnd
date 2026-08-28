@@ -10,6 +10,8 @@ import {
   deleteDish,
   type DishStatus,
 } from "../../../services/api";
+import DishImagesManager from "./DishImagesManager";
+import DishIngredientsManager from "./DishIngredientsManager";
 
 interface Dish {
   id: string;
@@ -400,6 +402,17 @@ export default function MenuManagement() {
                   className="w-full bg-[#FFF8F6] border border-rose-100 rounded-xl p-3 text-sm outline-none focus:border-[#B34510] text-gray-800 resize-none"
                 />
               </div>
+
+              {editingDishId !== null ? (
+                <div className="space-y-4 border-t border-gray-100 pt-4">
+                  <DishImagesManager dishId={editingDishId} />
+                  <DishIngredientsManager dishId={editingDishId} />
+                </div>
+              ) : (
+                <p className="text-[11px] text-gray-400 bg-gray-50 rounded-lg p-2.5 text-center">
+                  احفظي الطبق الأول، وبعدين تقدري تضيفي صور ومكوّنات من "تعديل".
+                </p>
+              )}
 
               <div className="flex items-center justify-end gap-3 pt-4 border-t border-gray-100">
                 <button

@@ -260,6 +260,61 @@ export const deleteDish = async (dishId: string) => {
   return fetchingApi("delete", `v1/Dishes/${dishId}`);
 };
 
+// ===== صور الأطباق (DishImage) =====
+export const getDishImages = async (dishId: string) => {
+  return fetchingApi("get", `v1/DishImage/${dishId}`);
+};
+
+// الـ swagger واصف الـ endpoint ده بـ content-type "application/json" بس
+// حقوله فيها ملف (File بصيغة binary) وencoding من نوع form — ده تلقائيًا
+// يعني إنه لازم يتبعت كـ multipart/form-data فعليًا (حاجة شائعة إن الـ
+// Swashbuckle يوصفها غلط للـ [FromForm] endpoints)، فبنستخدم FormData
+// وaxios بيظبط الـ Content-Type والـ boundary لوحده.
+export const uploadDishImage = async (params: {
+  dishId: string;
+  file: File;
+  isPrimary?: boolean;
+}) => {
+  const formData = new FormData();
+  formData.append("DishId", params.dishId);
+  formData.append("File", params.file);
+  if (params.isPrimary) formData.append("IsPrimary", "true");
+  return fetchingApi("post", "v1/DishImage", formData);
+};
+
+export const setPrimaryDishImage = async (imageId: string) => {
+  return fetchingApi("put", "v1/DishImage/primary", { imageId });
+};
+
+export const deleteDishImage = async (imageId: string) => {
+  return fetchingApi("delete", `v1/DishImage/${imageId}`);
+};
+
+// ===== مكوّنات الطبق (Ingredients) =====
+export const getIngredients = async (dishId: string) => {
+  return fetchingApi("get", `v1/Ingredients/${dishId}`);
+};
+
+export const addIngredient = async (payload: {
+  dishId: string;
+  name: string;
+  quantity: string;
+}) => {
+  return fetchingApi("post", "v1/Ingredients", payload);
+};
+
+export const updateIngredient = async (payload: {
+  ingredientId: string;
+  name: string;
+  quantity: string;
+}) => {
+  return fetchingApi("put", "v1/Ingredients", payload);
+};
+
+export const deleteIngredient = async (ingredientId: string) => {
+  return fetchingApi("delete", `v1/Ingredients/${ingredientId}`);
+};
+
 // ===== Reviews (التقييمات الحقيقية) =====
 export const getDishReviews = async (
   dishId: string,
