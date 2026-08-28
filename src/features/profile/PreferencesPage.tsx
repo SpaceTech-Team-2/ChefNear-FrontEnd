@@ -1,24 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { ArrowRight, Check, Bell, Leaf, MapPinned } from "lucide-react";
-
-// الـ backend حالياً معندوش endpoint لتفضيلات المستخدم، فبنخزنها محليًا
-// (localStorage) وبتتطبق فورًا من غير ما تحتاج اتصال بالسيرفر.
-const STORAGE_KEY = "chefnear:preferences";
-
-interface Preferences {
-  dietary: string[];
-  notifyOrderUpdates: boolean;
-  notifyOffers: boolean;
-  searchRadiusKm: number;
-}
-
-const defaultPreferences: Preferences = {
-  dietary: [],
-  notifyOrderUpdates: true,
-  notifyOffers: false,
-  searchRadiusKm: 10,
-};
+import { ArrowRight, Check, Bell, Leaf, MapPinned, Sparkles } from "lucide-react";
+import { loadPreferences, savePreferences, type LocalPreferences } from "../../services/localPreferences";
 
 const dietaryOptions = [
   { value: "vegetarian", label: "نباتي" },
@@ -27,22 +10,12 @@ const dietaryOptions = [
   { value: "low-spice", label: "أقل حرارة (توابل خفيفة)" },
 ];
 
-function loadPreferences(): Preferences {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return defaultPreferences;
-    return { ...defaultPreferences, ...JSON.parse(raw) };
-  } catch {
-    return defaultPreferences;
-  }
-}
-
 export default function PreferencesPage() {
-  const [prefs, setPrefs] = useState<Preferences>(loadPreferences);
+  const [prefs, setPrefs] = useState<LocalPreferences>(loadPreferences);
   const [saved, setSaved] = useState(false);
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(prefs));
+    savePreferences(prefs);
     setSaved(true);
     const timer = setTimeout(() => setSaved(false), 1200);
     return () => clearTimeout(timer);
@@ -109,6 +82,27 @@ export default function PreferencesPage() {
             هنستخدمها عشان نظهرلك الأطباق والشيفات الأنسب ليك.
           </p>
         </div>
+
+        {/* التخصصات المطبخية */}
+        <Link
+          to="/specialities"
+          className="flex items-center justify-between bg-white rounded-3xl border border-rose-100/80 shadow-sm p-6 hover:border-[#B34510]/40 transition-colors"
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-full bg-rose-50 text-[#B34510] flex items-center justify-center shrink-0">
+              <Sparkles className="w-4.5 h-4.5" />
+            </div>
+            <div>
+              <h2 className="font-black text-gray-900">التخصصات المطبخية</h2>
+              <p className="text-xs text-gray-400 mt-0.5">
+                {prefs.specialties.length > 0
+                  ? `${prefs.specialties.length} تخصص مختار`
+                  : "لسه مفيش تخصصات مختارة"}
+              </p>
+            </div>
+          </div>
+          <span className="text-xs font-bold text-[#A03E0F]">تعديل ←</span>
+        </Link>
 
         {/* الإشعارات */}
         <div className="bg-white rounded-3xl border border-rose-100/80 shadow-sm p-6 space-y-4">

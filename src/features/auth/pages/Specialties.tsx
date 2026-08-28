@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Check,
   Fish,
@@ -10,6 +11,7 @@ import {
   Flame,
   ArrowLeft,
 } from "lucide-react";
+import { loadPreferences, savePreferences } from "../../../services/localPreferences";
 
 interface SpecialtyOption {
   id: string;
@@ -87,8 +89,19 @@ const specialtiesData: SpecialtyOption[] = [
 ];
 
 export default function Specialties() {
-  // مصفوفة لتخزين معرفات التخصصات المختارة (معرف افتراضي "تقليدي")
-  const [selectedIds, setSelectedIds] = useState<string[]>(["traditional"]);
+  const navigate = useNavigate();
+  // مصفوفة لتخزين معرفات التخصصات المختارة — بنقراها من نفس تخزين
+  // "تفضيلاتك" لو المستخدم اختار قبل كده، وإلا "تقليدي" كقيمة افتراضية.
+  const [selectedIds, setSelectedIds] = useState<string[]>(() => {
+    const saved = loadPreferences().specialties;
+    return saved.length > 0 ? saved : ["traditional"];
+  });
+
+  const handleSave = () => {
+    const prefs = loadPreferences();
+    savePreferences({ ...prefs, specialties: selectedIds });
+    navigate("/");
+  };
 
   const toggleSpecialty = (id: string) => {
     if (selectedIds.includes(id)) {
@@ -186,11 +199,17 @@ export default function Specialties() {
 
           {/* Action Buttons */}
           <div className="flex items-center gap-3 w-full sm:w-auto">
-            <button className="flex-1 sm:flex-none border border-gray-200 text-gray-600 hover:bg-gray-50 font-bold px-6 py-2.5 rounded-full text-xs transition-colors">
+            <button
+              onClick={() => navigate("/")}
+              className="flex-1 sm:flex-none border border-gray-200 text-gray-600 hover:bg-gray-50 font-bold px-6 py-2.5 rounded-full text-xs transition-colors"
+            >
               تخطي الآن
             </button>
 
-            <button className="flex-1 sm:flex-none bg-[#B34510] hover:bg-[#A03E0F] text-white font-bold px-7 py-2.5 rounded-full text-xs flex items-center justify-center gap-2 transition-colors shadow-sm">
+            <button
+              onClick={handleSave}
+              className="flex-1 sm:flex-none bg-[#B34510] hover:bg-[#A03E0F] text-white font-bold px-7 py-2.5 rounded-full text-xs flex items-center justify-center gap-2 transition-colors shadow-sm"
+            >
               <span>حفظ التفضيلات</span>
               <ArrowLeft className="w-4 h-4" />
             </button>

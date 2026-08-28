@@ -1,6 +1,7 @@
+import { useState } from "react";
 import { useFormik } from "formik";
 import * as Yup from "yup";
-import { AlertCircle, Send } from "lucide-react";
+import { AlertCircle, Send, CheckCircle2 } from "lucide-react";
 
 interface ReportFormValues {
   subject: string;
@@ -16,7 +17,12 @@ const validationSchema = Yup.object({
     .required("وصف المشكلة مطلوب"),
 });
 
-export default function ReportIssue () {
+// ملحوظة: الـ backend حالياً معندوش endpoint لاستقبال بلاغات المشاكل، فمفيش
+// طريقة نبعت بيها البلاغ فعليًا لحد ما يتضاف. عشان كده مش بنقول للمستخدم
+// "اتبعت" — بنسجّله محليًا ونوجّهه لإيميل الدعم بدل ما نديله انطباع كاذب.
+export default function ReportIssue() {
+  const [submitted, setSubmitted] = useState(false);
+
   const formik = useFormik<ReportFormValues>({
     initialValues: {
       subject: "",
@@ -24,15 +30,41 @@ export default function ReportIssue () {
       description: "",
     },
     validationSchema,
-    onSubmit: (values, { resetForm }) => {
-      console.log("Report Data:", values);
-      alert("تم إرسال بلاغك بنجاح، وسنتواصل معك قريباً!");
-      resetForm();
+    onSubmit: () => {
+      setSubmitted(true);
     },
   });
 
+  if (submitted) {
+    const mailBody = encodeURIComponent(
+      `الموضوع: ${formik.values.subject}\nرقم الطلب: ${formik.values.orderNumber || "—"}\n\n${formik.values.description}`
+    );
+    return (
+      <div dir="rtl" className="max-w-2xl mx-auto p-6 text-right">
+        <div className="bg-white p-8 rounded-lg border shadow-sm text-center space-y-4">
+          <div className="w-14 h-14 rounded-full bg-amber-50 flex items-center justify-center mx-auto">
+            <CheckCircle2 className="w-7 h-7 text-amber-600" />
+          </div>
+          <h2 className="text-lg font-bold text-gray-900">سجّلنا تفاصيل بلاغك</h2>
+          <p className="text-sm text-gray-500 leading-relaxed">
+            نظام استقبال البلاغات الآلي لسه مش متاح، فبلاغك محفوظ عندك بس في المتصفح ده حاليًا.
+            عشان نضمن وصوله لفريق الدعم، ابعتيه على إيميلنا مباشرة:
+          </p>
+          <a
+            href={`mailto:support@chefnear.com?subject=${encodeURIComponent(
+              formik.values.subject
+            )}&body=${mailBody}`}
+            className="inline-block bg-orange-500 hover:bg-orange-600 text-white font-bold px-6 py-2.5 rounded-md text-sm transition-colors"
+          >
+            فتح إيميل لفريق الدعم
+          </a>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="max-w-2xl mx-auto p-6 text-right">
+    <div dir="rtl" className="max-w-2xl mx-auto p-6 text-right">
       <h1 className="text-2xl font-bold mb-2 flex items-center gap-2">
         <AlertCircle className="w-7 h-7 text-red-500" /> الإبلاغ عن مشكلة
       </h1>
@@ -106,4 +138,4 @@ export default function ReportIssue () {
       </form>
     </div>
   );
-};
+}

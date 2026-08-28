@@ -1,29 +1,58 @@
 import { useState } from "react";
-import { Clock, Landmark, Camera, Save, CreditCard } from "lucide-react";
+import { Clock, Landmark, Camera, Save, CreditCard, Check } from "lucide-react";
+
+// ملحوظة: مفيش أي endpoint في الـ backend لإعدادات المطبخ (الاسم/النبذة/
+// ساعات العمل/نطاق التوصيل) — مفيش حتى PUT لتحديث البروفايل نفسه (GET
+// /profile/me موجود بس من غير تعديل). فبنخزن التعديلات محليًا مؤقتًا بدل ما
+// زرار "حفظ" يفضل من غير أي أثر خالص.
+const STORAGE_KEY = "chefnear:kitchen-settings-draft";
+
+interface KitchenSettingsDraft {
+  kitchenName: string;
+  bio: string;
+  deliveryRadius: string;
+  minOrder: string;
+  weekdaySchedule: { active: boolean; from: string; to: string };
+  weekendSchedule: { active: boolean; from: string; to: string };
+}
+
+const defaults: KitchenSettingsDraft = {
+  kitchenName: "مطبخ الشيف أحمد التراثي",
+  bio: "أقدم أشهى المأكولات العربية التقليدية بلمسة عصرية. جميع المكونات طازجة ومختارة بعناية لضمان أفضل تجربة تذوق.",
+  deliveryRadius: "15",
+  minOrder: "50",
+  weekdaySchedule: { active: true, from: "09:00 AM", to: "10:00 PM" },
+  weekendSchedule: { active: true, from: "11:00 AM", to: "11:30 PM" },
+};
+
+function loadDraft(): KitchenSettingsDraft {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return defaults;
+    return { ...defaults, ...JSON.parse(raw) };
+  } catch {
+    return defaults;
+  }
+}
 
 export default function KitchenSettings() {
-  // General Info States
-  const [kitchenName, setKitchenName] = useState("مطبخ الشيف أحمد التراثي");
-  const [bio, setBio] = useState(
-    "أقدم أشهى المأكولات العربية التقليدية بلمسة عصرية. جميع المكونات طازجة ومختارة بعناية لضمان أفضل تجربة تذوق."
-  );
+  const draft = loadDraft();
+  const [kitchenName, setKitchenName] = useState(draft.kitchenName);
+  const [bio, setBio] = useState(draft.bio);
+  const [deliveryRadius, setDeliveryRadius] = useState(draft.deliveryRadius);
+  const [minOrder, setMinOrder] = useState(draft.minOrder);
+  const [weekdaySchedule, setWeekdaySchedule] = useState(draft.weekdaySchedule);
+  const [weekendSchedule, setWeekendSchedule] = useState(draft.weekendSchedule);
+  const [saved, setSaved] = useState(false);
 
-  // Delivery States
-  const [deliveryRadius, setDeliveryRadius] = useState("15");
-  const [minOrder, setMinOrder] = useState("50");
-
-  // Business Hours States
-  const [weekdaySchedule, setWeekdaySchedule] = useState({
-    active: true,
-    from: "09:00 AM",
-    to: "10:00 PM",
-  });
-
-  const [weekendSchedule, setWeekendSchedule] = useState({
-    active: true,
-    from: "11:00 AM",
-    to: "11:30 PM",
-  });
+  const handleSave = () => {
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({ kitchenName, bio, deliveryRadius, minOrder, weekdaySchedule, weekendSchedule })
+    );
+    setSaved(true);
+    setTimeout(() => setSaved(false), 2000);
+  };
 
   return (
     <div dir="rtl" className="space-y-8 font-sans pb-10">
@@ -172,18 +201,16 @@ export default function KitchenSettings() {
               <h2 className="text-xl font-bold text-gray-900">إعدادات الدفع</h2>
             </div>
 
-            <div className="bg-[#FFF1EC]/60 border border-rose-100 rounded-xl p-4 flex items-center justify-between">
-              <button className="text-xs font-bold text-[#B34510] hover:underline">
-                تغيير الحساب
-              </button>
+            <div className="bg-[#FFF1EC]/60 border border-rose-100 rounded-xl p-4 flex items-center justify-between opacity-60">
+              <span className="text-xs font-bold text-gray-400">قريبًا</span>
               <div className="text-left space-y-1">
                 <span className="text-[10px] text-gray-400 block">
                   الحساب البنكي المربوط
                 </span>
                 <div className="flex items-center gap-2 dir-ltr">
                   <CreditCard className="w-4 h-4 text-gray-400" />
-                  <span className="text-xs font-bold text-gray-700">
-                    **** **** **** 4589
+                  <span className="text-xs font-bold text-gray-400">
+                    مش متاح بعد
                   </span>
                 </div>
               </div>
@@ -191,10 +218,18 @@ export default function KitchenSettings() {
           </div>
 
           {/* Save Changes Button (Mobile View Placement) */}
-          <button className="w-full bg-[#B34510] hover:bg-[#A03E0F] text-white py-3.5 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-colors shadow-sm">
-            <Save className="w-4 h-4" />
-            <span>حفظ التغييرات</span>
-          </button>
+          <div className="space-y-2">
+            <button
+              onClick={handleSave}
+              className="w-full bg-[#B34510] hover:bg-[#A03E0F] text-white py-3.5 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-colors shadow-sm"
+            >
+              {saved ? <Check className="w-4 h-4" /> : <Save className="w-4 h-4" />}
+              <span>{saved ? "تم الحفظ" : "حفظ التغييرات"}</span>
+            </button>
+            <p className="text-[10px] text-gray-400 text-center">
+              بتتحفظ محليًا مؤقتًا — الباك إند لسه معندوش endpoint لتحديث بيانات المطبخ.
+            </p>
+          </div>
         </div>
 
         {/* Right Column (General Info & Delivery Orders Settings) - Takes 2 Cols */}
