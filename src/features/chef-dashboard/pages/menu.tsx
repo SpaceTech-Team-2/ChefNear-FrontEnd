@@ -3,7 +3,7 @@ import { Plus, Search, Edit2, Trash2, X, Loader2 } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   getCategories,
-  getDishes,
+  getChefDishes,
   getMyProfile,
   createDish,
   updateDish,
@@ -53,27 +53,22 @@ export default function MenuManagement() {
   });
   const myChefId = profileRes?.data?.id;
 
-  // ملحوظة: GET /Dishes مفيهوش فلتر "أطباقي أنا بس" موثّق في الـ swagger،
-  // فبنجيب صفحة كبيرة من الأطباق ونفلتر محليًا اللي chefId بتاعها بيطابق
-  // البروفايل الحالي. لو الـ backend ضاف endpoint مخصص لأطباق الشيف، الأفضل
-  // نستبدل الفلترة دي باستدعاء مباشر له.
+  // GET /Chef/{chefId}/Dishes: endpoint مخصص لأطباق الشيف بس (اتضاف حديثًا
+  // في الـ backend — كان قبل كده بيتعمل جلب 100 طبق وفلترة محلية).
   const {
     data: dishesRes,
     isLoading: dishesLoading,
     isError: dishesError,
   } = useQuery({
-    queryKey: ["all-dishes-for-chef-filter"],
-    queryFn: () => getDishes({ PageSize: 100 }),
+    queryKey: ["chef-dishes", myChefId],
+    queryFn: () => getChefDishes(myChefId as string),
     enabled: Boolean(myChefId),
   });
 
-  const menuItems: Dish[] = (dishesRes?.data ?? []).filter((d: Dish) => {
-    const dishChefId = d.chefId ?? d.chef?.id;
-    return !dishChefId || dishChefId === myChefId;
-  });
+  const menuItems: Dish[] = dishesRes?.data ?? [];
 
   const invalidateDishes = () =>
-    queryClient.invalidateQueries({ queryKey: ["all-dishes-for-chef-filter"] });
+    queryClient.invalidateQueries({ queryKey: ["chef-dishes", myChefId] });
 
   const [formError, setFormError] = useState<string | null>(null);
 

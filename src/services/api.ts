@@ -143,6 +143,58 @@ export const deleteCategory = async (categoryId: string) => {
   return fetchingApi("delete", `v1/Categories/${categoryId}`);
 };
 
+// ===== لوحة الأدمن الحقيقية (أُضيفت في الباك إند حديثًا) =====
+export interface GetAdminUsersParams {
+  PageNumber?: number;
+  PageSize?: number;
+  Role?: string;
+  Search?: string;
+}
+
+export const getAdminUsers = async (params: GetAdminUsersParams = {}) => {
+  const query = new URLSearchParams(
+    Object.entries(params)
+      .filter(([, v]) => v !== undefined && v !== "")
+      .map(([k, v]) => [k, String(v)])
+  ).toString();
+  return fetchingApi("get", `v1/Admin/users${query ? `?${query}` : ""}`);
+};
+
+export interface CreateAdminPayload {
+  fullName: string;
+  email: string;
+  password: string;
+}
+
+export const createAdminUser = async (payload: CreateAdminPayload) => {
+  return fetchingApi("post", "v1/Admin/users", payload);
+};
+
+// ملحوظة: الـ endpoint اسمه DELETE على المستخدم بالكامل — مفيش "حظر مؤقت"
+// موثّق، فده حذف نهائي مش تجميد حساب.
+export const deleteAdminUser = async (userId: string) => {
+  return fetchingApi("delete", `v1/Admin/users/${userId}`);
+};
+
+export const getAdminReviews = async (
+  params: { pageNumber?: number; pageSize?: number } = {}
+) => {
+  const query = new URLSearchParams(
+    Object.entries(params)
+      .filter(([, v]) => v !== undefined)
+      .map(([k, v]) => [k, String(v)])
+  ).toString();
+  return fetchingApi("get", `v1/Admin/reviews${query ? `?${query}` : ""}`);
+};
+
+export const deleteAdminReview = async (reviewId: string) => {
+  return fetchingApi("delete", `v1/Admin/reviews/${reviewId}`);
+};
+
+export const getMonthlyReport = async () => {
+  return fetchingApi("get", "v1/Admin/reports/monthly");
+};
+
 export interface GetDishesParams {
   Search?: string;
   CategoryId?: string;
@@ -380,6 +432,11 @@ export const updateDish = async (dishId: string, payload: UpdateDishPayload) => 
 
 export const deleteDish = async (dishId: string) => {
   return fetchingApi("delete", `v1/Dishes/${dishId}`);
+};
+
+// أطباق شيف معيّن بس (endpoint مخصص، بدل ما نجيب كل الأطباق ونفلتر محليًا)
+export const getChefDishes = async (chefId: string) => {
+  return fetchingApi("get", `v1/Chef/${chefId}/Dishes`);
 };
 
 // ===== صور الأطباق (DishImage) =====

@@ -9,12 +9,14 @@ import {
   X,
   ChevronLeft,
   Tag,
+  MessageSquare,
 } from "lucide-react";
 import { AdminUsersView } from "./AdminViews";
 import { AdminDisputesView } from "./AdminDisputesView";
 import { AdminAnalyticsView } from "./AdminAnalyticsView";
 import { AdminSettingsView } from "./AdminSettingsView";
 import { AdminCategoriesView } from "./AdminCategoriesView";
+import { AdminReviewsView } from "./AdminReviewsView";
 
 interface NavItem {
   id: string;
@@ -45,6 +47,12 @@ export const AdminLayout: React.FC = () => {
       label: "التقارير والتحليلات",
       shortLabel: "التحليلات",
       icon: <BarChart3 className="w-5 h-5" />,
+    },
+    {
+      id: "reviews",
+      label: "إدارة التقييمات",
+      shortLabel: "التقييمات",
+      icon: <MessageSquare className="w-5 h-5" />,
     },
     {
       id: "categories",
@@ -128,6 +136,7 @@ export const AdminLayout: React.FC = () => {
         {activeTab === "users" && <AdminUsersView />}
         {activeTab === "disputes" && <AdminDisputesView />}
         {activeTab === "analytics" && <AdminAnalyticsView />}
+        {activeTab === "reviews" && <AdminReviewsView />}
         {activeTab === "categories" && <AdminCategoriesView />}
         {activeTab === "settings" && <AdminSettingsView />}
       </main>
