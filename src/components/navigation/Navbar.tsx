@@ -14,7 +14,12 @@ import { Search, ShoppingCart, Heart, Bell, ChevronDown } from "lucide-react"; /
 import { Link, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useCart } from "../../services/CartContext";
-import { getMyProfile, getNotifications, deleteNotification } from "../../services/api";
+import {
+  getMyProfile,
+  getNotifications,
+  deleteNotification,
+  clearNotifications,
+} from "../../services/api";
 import { logout } from "../../services/auth";
 
 const navLinks = [
@@ -52,6 +57,11 @@ export default function Navbar() {
 
   const deleteNotificationMutation = useMutation({
     mutationFn: (id: string) => deleteNotification(id),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["notifications"] }),
+  });
+
+  const clearNotificationsMutation = useMutation({
+    mutationFn: clearNotifications,
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["notifications"] }),
   });
 
@@ -158,6 +168,18 @@ export default function Navbar() {
                   <PopoverPanel className="absolute left-0 z-10 mt-3 w-72 rounded-xl bg-white p-2 shadow-lg ring-1 ring-black/5 text-sm max-h-96 overflow-y-auto">
                     {notifications.length === 0 && (
                       <p className="text-xs text-gray-400 text-center py-6">مفيش إشعارات جديدة</p>
+                    )}
+                    {notifications.length > 0 && (
+                      <div className="flex items-center justify-between px-3 py-1.5 border-b border-gray-50 mb-1">
+                        <span className="text-[11px] font-bold text-gray-500">الإشعارات</span>
+                        <button
+                          onClick={() => clearNotificationsMutation.mutate()}
+                          disabled={clearNotificationsMutation.isPending}
+                          className="text-[11px] font-bold text-[#A03E0F] hover:underline disabled:opacity-50"
+                        >
+                          مسح الكل
+                        </button>
+                      </div>
                     )}
                     {notifications.map((n, idx) => (
                       <div

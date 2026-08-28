@@ -8,7 +8,12 @@ import {
   Search,
   Eye,
   Minus,
+  Wallet as WalletIcon,
+  Loader2,
+  X,
 } from "lucide-react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { getMyWallet, withdrawFromWallet, type PayoutMethod } from "../../../services/api";
 
 interface KPICard {
   id: number;
@@ -93,12 +98,41 @@ const transactionsData: Transaction[] = [
   },
 ];
 
+const payoutMethods: { value: PayoutMethod; label: string }[] = [
+  { value: "VodafoneCash", label: "فودافون كاش" },
+  { value: "EtisalatCash", label: "اتصالات كاش" },
+  { value: "OrangeCash", label: "أورنج كاش" },
+  { value: "BankCard", label: "بطاقة بنكية" },
+];
+
 export default function SalesAnalytics() {
-  
+  const queryClient = useQueryClient();
   const [timeRange, setTimeRange] = useState<"يومي" | "أسبوعي" | "شهري">(
     "شهري"
   );
   const [searchQuery, setSearchQuery] = useState("");
+  const [showWithdrawModal, setShowWithdrawModal] = useState(false);
+  const [withdrawAmount, setWithdrawAmount] = useState("");
+  const [payoutMethod, setPayoutMethod] = useState<PayoutMethod>("VodafoneCash");
+
+  // ملحوظة: رد GET /Wallets/my-wallet لسه مش موثّق رسميًا، فبنقرأ الرصيد
+  // بشكل دفاعي من أكتر من اسم حقل محتمل.
+  const { data: walletRes, isLoading: walletLoading, isError: walletError } = useQuery({
+    queryKey: ["my-wallet"],
+    queryFn: getMyWallet,
+  });
+  const walletData = walletRes?.data ?? walletRes;
+  const balance = walletData?.balance ?? walletData?.availableBalance ?? walletData?.amount;
+
+  const withdrawMutation = useMutation({
+    mutationFn: () =>
+      withdrawFromWallet({ amount: Number(withdrawAmount), payoutMethod }),
+    onSuccess: () => {
+      setShowWithdrawModal(false);
+      setWithdrawAmount("");
+      queryClient.invalidateQueries({ queryKey: ["my-wallet"] });
+    },
+  });
 
   const getStatusBadge = (status: Transaction["status"]) => {
     switch (status) {
@@ -138,6 +172,34 @@ export default function SalesAnalytics() {
         <button className="bg-white border border-rose-200 hover:bg-rose-50/50 text-gray-700 font-bold px-4 py-2.5 rounded-xl flex items-center justify-center gap-2 text-xs transition-colors shadow-sm self-start sm:self-auto">
           <Download className="w-4 h-4 text-[#B34510]" />
           <span>تصدير التقرير</span>
+        </button>
+      </div>
+
+      {/* Wallet Card */}
+      <div className="bg-gradient-to-l from-[#B34510] to-[#A03E0F] rounded-2xl p-6 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4 text-white">
+        <div className="flex items-center gap-4">
+          <div className="w-12 h-12 rounded-full bg-white/15 flex items-center justify-center shrink-0">
+            <WalletIcon className="w-6 h-6" />
+          </div>
+          <div>
+            <p className="text-xs text-white/70">رصيد محفظتك</p>
+            {walletLoading ? (
+              <div className="h-7 w-24 bg-white/20 rounded animate-pulse mt-1" />
+            ) : walletError ? (
+              <p className="text-sm text-white/80">تعذر تحميل الرصيد</p>
+            ) : (
+              <p className="text-2xl font-black">
+                {typeof balance === "number" ? balance.toLocaleString("ar-EG") : "—"}{" "}
+                <span className="text-sm font-normal">ج.م</span>
+              </p>
+            )}
+          </div>
+        </div>
+        <button
+          onClick={() => setShowWithdrawModal(true)}
+          className="bg-white text-[#A03E0F] font-bold px-6 py-2.5 rounded-xl text-sm hover:bg-white/90 transition-colors self-start sm:self-auto"
+        >
+          طلب سحب أرباح
         </button>
       </div>
 
@@ -299,6 +361,68 @@ export default function SalesAnalytics() {
           </div>
         </div>
       </div>
+
+      {/* Withdraw Modal */}
+      {showWithdrawModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="bg-white rounded-3xl max-w-sm w-full p-6 space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-black text-gray-900">طلب سحب أرباح</h3>
+              <button
+                onClick={() => setShowWithdrawModal(false)}
+                className="p-1.5 text-gray-400 hover:text-gray-700 rounded-full hover:bg-gray-100"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-gray-600">المبلغ (ج.م)</label>
+              <input
+                type="number"
+                value={withdrawAmount}
+                onChange={(e) => setWithdrawAmount(e.target.value)}
+                placeholder="0"
+                className="w-full bg-[#FFF8F6] border border-rose-100 rounded-xl py-2.5 px-4 text-sm outline-none focus:border-[#B34510]"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-gray-600">طريقة الاستلام</label>
+              <div className="grid grid-cols-2 gap-2">
+                {payoutMethods.map((m) => (
+                  <button
+                    key={m.value}
+                    onClick={() => setPayoutMethod(m.value)}
+                    className={`py-2 rounded-xl text-xs font-bold border transition-colors ${
+                      payoutMethod === m.value
+                        ? "bg-[#B34510] text-white border-[#B34510]"
+                        : "bg-[#FFF8F6] text-gray-700 border-rose-100"
+                    }`}
+                  >
+                    {m.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {withdrawMutation.isError && (
+              <p className="text-xs text-red-600 bg-red-50 border border-red-100 rounded-xl p-3 text-center">
+                تعذر تنفيذ طلب السحب، حاول تاني.
+              </p>
+            )}
+
+            <button
+              onClick={() => withdrawMutation.mutate()}
+              disabled={withdrawMutation.isPending || !withdrawAmount}
+              className="w-full flex items-center justify-center gap-2 bg-[#B34510] hover:bg-[#A03E0F] text-white font-bold py-3 rounded-xl transition-colors disabled:opacity-50"
+            >
+              {withdrawMutation.isPending && <Loader2 className="w-4 h-4 animate-spin" />}
+              <span>تأكيد طلب السحب</span>
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

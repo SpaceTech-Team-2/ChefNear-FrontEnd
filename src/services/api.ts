@@ -45,6 +45,24 @@ export const getCategories = async () => {
   return fetchingApi("get", "v1/Categories");
 };
 
+// ===== Categories CRUD (أدمن فقط) =====
+export interface CategoryPayload {
+  name: string;
+  description?: string;
+}
+
+export const createCategory = async (payload: CategoryPayload) => {
+  return fetchingApi("post", "v1/Categories", payload);
+};
+
+export const updateCategory = async (categoryId: string, payload: CategoryPayload) => {
+  return fetchingApi("put", `v1/Categories/${categoryId}`, payload);
+};
+
+export const deleteCategory = async (categoryId: string) => {
+  return fetchingApi("delete", `v1/Categories/${categoryId}`);
+};
+
 export interface GetDishesParams {
   Search?: string;
   CategoryId?: string;
@@ -273,6 +291,17 @@ export const createReview = async (payload: CreateReviewPayload) => {
 // ===== Wallet (جانب الشيف) =====
 export const getMyWallet = async () => {
   return fetchingApi("get", "v1/Wallets/my-wallet");
+};
+
+export type PayoutMethod = "VodafoneCash" | "EtisalatCash" | "OrangeCash" | "BankCard";
+
+export interface WalletWithdrawPayload {
+  amount: number;
+  payoutMethod: PayoutMethod;
+}
+
+export const withdrawFromWallet = async (payload: WalletWithdrawPayload) => {
+  return fetchingApi("put", "v1/Wallets/withdraw", payload);
 };
 
 // ===== Notifications =====
