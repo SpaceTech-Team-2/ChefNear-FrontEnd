@@ -14,6 +14,8 @@ const HowItWorks = lazy(() => import('../../features/auth/pages/HowItWorks'));
 const HelpCenter = lazy(() => import('../../features/auth/pages/HelpCenter'));
 const ReportIssue = lazy(() => import("../../features/auth/pages/ReportIssue"));
 const RegistrationPage = lazy(() => import('../../features/auth/pages/RegistrationPage'));
+const ForgotPasswordPage = lazy(() => import('../../features/auth/pages/ForgotPasswordPage'));
+const ResetPasswordPage = lazy(() => import('../../features/auth/pages/ResetPasswordPage'));
 
 const ChefDashboardLayout = lazy(() => import('../../features/chef-dashboard/ChefDashboardLayout'));
 const DashboardOverview = lazy(() => import('../../features/chef-dashboard/pages/DashboardOverview'));
@@ -34,6 +36,7 @@ const ChefsList = lazy(() => import("../../features/discovery/ChefsList"));
 const ProfilePage = lazy(() => import("../../features/profile/ProfilePage"));
 const PreferencesPage = lazy(() => import("../../features/profile/PreferencesPage"));
 const AddressesPage = lazy(() => import("../../features/profile/AddressesPage"));
+const ChangePasswordPage = lazy(() => import("../../features/profile/ChangePasswordPage"));
 const CartPage = lazy(() => import("../../features/cart/CartPage"));
 const OrdersHistoryPage = lazy(() => import("../../features/orders/OrdersHistoryPage"));
 const OrderTrackingPage = lazy(() => import("../../features/orders/OrderTrackingPage"));
@@ -70,6 +73,22 @@ export const router = createBrowserRouter([
             element: (
               <Suspense fallback={<div>جاري التحميل...</div>}>
                 <RegistrationPage />
+              </Suspense>
+            ),
+          },
+          {
+            path: "/forgot-password",
+            element: (
+              <Suspense fallback={<div>جاري التحميل...</div>}>
+                <ForgotPasswordPage />
+              </Suspense>
+            ),
+          },
+          {
+            path: "/reset-password",
+            element: (
+              <Suspense fallback={<div>جاري التحميل...</div>}>
+                <ResetPasswordPage />
               </Suspense>
             ),
           },
@@ -283,6 +302,14 @@ export const router = createBrowserRouter([
         element: (
           <Suspense fallback={<div>جاري التحميل...</div>}>
             <AddressesPage />
+          </Suspense>
+        ),
+      },
+      {
+        path: "/change-password",
+        element: (
+          <Suspense fallback={<div>جاري التحميل...</div>}>
+            <ChangePasswordPage />
           </Suspense>
         ),
       },

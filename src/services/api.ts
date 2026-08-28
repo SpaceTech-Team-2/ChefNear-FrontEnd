@@ -1,5 +1,5 @@
 import axios from "axios";
-import type { InternalAxiosRequestConfig } from "axios";
+import type { AxiosError, InternalAxiosRequestConfig } from "axios";
 
 const API_BASE_URL = "https://chefnear.runasp.net/api";
 const client = axios.create({ baseURL: API_BASE_URL });
@@ -12,6 +12,86 @@ client.interceptors.request.use((config: InternalAxiosRequestConfig) => {
   }
   return config;
 });
+
+// ===== تجديد التوكين تلقائيًا لما ينتهي (401) =====
+// مدة صلاحية الـ access token مش موثّقة، فمش عارفين نجدده بشكل استباقي قبل
+// ما ينتهي — بدل كده بنعتمد على إعادة المحاولة رد فعل (reactive retry): أول
+// 401 على أي request محمي، بنجرب /Auth/refresh-token مرة واحدة، ولو نجح
+// بنعيد الطلب الأصلي بالتوكين الجديد. لو أكتر من request اتعملهملهم 401 في
+// نفس اللحظة، بنستنى نتيجة أول محاولة تجديد بدل ما نبعت أكتر من refresh
+// طلب مع بعض.
+let isRefreshing = false;
+let refreshWaiters: ((newToken: string | null) => void)[] = [];
+
+function notifyWaiters(newToken: string | null) {
+  refreshWaiters.forEach((cb) => cb(newToken));
+  refreshWaiters = [];
+}
+
+async function performRefresh(): Promise<string | null> {
+  const refreshToken = localStorage.getItem("refreshToken");
+  const accessToken = localStorage.getItem("token");
+  if (!refreshToken) return null;
+
+  try {
+    // axios عادي (مش client) عشان نتفادى إن الـ response interceptor يحاول
+    // يجدد التوكين من جوه نفسه لو الـ refresh call ده فشل بـ 401 كمان.
+    const res = await axios.post(`${API_BASE_URL}/v1/Auth/refresh-token`, {
+      accessToken,
+      refreshToken,
+    });
+    const newAccessToken = res.data?.data?.accessToken ?? res.data?.accessToken;
+    const newRefreshToken = res.data?.data?.refreshToken ?? res.data?.refreshToken;
+
+    if (!newAccessToken) return null;
+
+    localStorage.setItem("token", newAccessToken);
+    if (newRefreshToken) localStorage.setItem("refreshToken", newRefreshToken);
+    return newAccessToken;
+  } catch {
+    return null;
+  }
+}
+
+client.interceptors.response.use(
+  (response) => response,
+  async (error: AxiosError) => {
+    const originalRequest = error.config as (InternalAxiosRequestConfig & { _retried?: boolean }) | undefined;
+    const isAuthEndpoint = originalRequest?.url?.includes("/Auth/");
+
+    if (error.response?.status !== 401 || !originalRequest || originalRequest._retried || isAuthEndpoint) {
+      return Promise.reject(error);
+    }
+
+    originalRequest._retried = true;
+
+    if (isRefreshing) {
+      // في انتظار محاولة التجديد الجارية بالفعل
+      const newToken = await new Promise<string | null>((resolve) => {
+        refreshWaiters.push(resolve);
+      });
+      if (!newToken) return Promise.reject(error);
+      originalRequest.headers?.set?.("Authorization", `Bearer ${newToken}`);
+      return client(originalRequest);
+    }
+
+    isRefreshing = true;
+    const newToken = await performRefresh();
+    isRefreshing = false;
+    notifyWaiters(newToken);
+
+    if (!newToken) {
+      // فشل التجديد — التوكين القديم منتهي فعليًا، امسحيه عشان الصفحات
+      // المحمية (ProtectedRoute) تحوّل المستخدم لتسجيل الدخول تلقائيًا.
+      localStorage.removeItem("token");
+      localStorage.removeItem("refreshToken");
+      return Promise.reject(error);
+    }
+
+    originalRequest.headers?.set?.("Authorization", `Bearer ${newToken}`);
+    return client(originalRequest);
+  }
+);
 
 type HttpMethod = "get" | "post" | "put" | "delete" | "patch";
 
@@ -91,6 +171,48 @@ export const getDishesID = async (ID: string) => {
 // ===== Profile (محتاج تسجيل دخول) =====
 export const getMyProfile = async () => {
   return fetchingApi("get", "v1/profile/me");
+};
+
+export const uploadProfileImage = async (file: File) => {
+  const formData = new FormData();
+  formData.append("file", file);
+  return fetchingApi("post", "v1/profile/image", formData);
+};
+
+export const deleteProfileImage = async () => {
+  return fetchingApi("delete", "v1/profile/image");
+};
+
+// ===== كلمة المرور =====
+export const requestPasswordReset = async (email: string) => {
+  return fetchingApi("post", "v1/Auth/forgot-password", { email });
+};
+
+export interface ResetPasswordPayload {
+  email: string;
+  token: string;
+  newPassword: string;
+  confirmPassword: string;
+}
+
+export const resetPassword = async (payload: ResetPasswordPayload) => {
+  return fetchingApi("post", "v1/Auth/reset-password", payload);
+};
+
+export interface ChangePasswordPayload {
+  oldPassword: string;
+  newPassword: string;
+  confirmPassword: string;
+}
+
+export const changePassword = async (payload: ChangePasswordPayload) => {
+  // اسم الحقل في الـ swagger فيه خطأ إملائي غريب ("oLdPassword" بحرف L
+  // كبير)، فبنبعته زي ما هو موثّق بالظبط بدل ما نفترض إنه هيتقبل بأي شكل.
+  return fetchingApi("post", "v1/Auth/change-password", {
+    oLdPassword: payload.oldPassword,
+    newPassword: payload.newPassword,
+    confirmPassword: payload.confirmPassword,
+  });
 };
 
 // ===== Addresses (محتاج تسجيل دخول) =====

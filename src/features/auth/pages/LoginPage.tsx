@@ -92,7 +92,14 @@ export default function LoginPage() {
           )}
 
           <TextBox formik={formik} name="email" placeholder="example@email.com" type="email" label="البريد الإلكتروني" />
-          <TextBox formik={formik} name="password" placeholder="••••••••" type="password" label="كلمة المرور" />
+          <div className="space-y-1">
+            <TextBox formik={formik} name="password" placeholder="••••••••" type="password" label="كلمة المرور" />
+            <div className="text-left">
+              <Link to="/forgot-password" className="text-xs font-bold text-[#B34510] hover:underline">
+                نسيت كلمة المرور؟
+              </Link>
+            </div>
+          </div>
 
           <div className="pt-1">
             <Button

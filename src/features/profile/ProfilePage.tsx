@@ -1,4 +1,5 @@
-import { useQuery } from "@tanstack/react-query";
+import { useRef } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, Link } from "react-router-dom";
 import {
   User,
@@ -9,8 +10,11 @@ import {
   LogOut,
   MapPin,
   Settings2,
+  KeyRound,
+  Camera,
+  Loader2,
 } from "lucide-react";
-import { getMyProfile } from "../../services/api";
+import { getMyProfile, uploadProfileImage } from "../../services/api";
 import { logout } from "../../services/auth";
 
 // شكل الرد لسه مش موثّق في الـ swagger (GET /api/v1/profile/me بيرجع "OK" بس من
@@ -34,6 +38,8 @@ interface ApiEnvelope<T> {
 
 export default function ProfilePage() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const { data, isLoading, isError } = useQuery<ApiEnvelope<Profile>>({
     queryKey: ["my-profile"],
@@ -45,6 +51,18 @@ export default function ProfilePage() {
     profile?.displayName ||
     [profile?.firstName, profile?.lastName].filter(Boolean).join(" ") ||
     "مستخدم ChefNear";
+
+  const uploadImageMutation = useMutation({
+    mutationFn: (file: File) => uploadProfileImage(file),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["my-profile"] }),
+  });
+
+  const handleAvatarClick = () => fileInputRef.current?.click();
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) uploadImageMutation.mutate(file);
+    e.target.value = "";
+  };
 
   const handleLogout = async () => {
     await logout();
@@ -73,9 +91,39 @@ export default function ProfilePage() {
         {!isLoading && !isError && (
           <div className="bg-white rounded-3xl border border-rose-100/80 shadow-sm overflow-hidden">
             <div className="p-6 flex items-center gap-4 border-b border-gray-50">
-              <div className="w-20 h-20 rounded-full bg-amber-700 text-white flex items-center justify-center text-2xl font-black shrink-0">
-                {displayName.trim().slice(0, 1)}
-              </div>
+              <button
+                type="button"
+                onClick={handleAvatarClick}
+                disabled={uploadImageMutation.isPending}
+                className="relative w-20 h-20 rounded-full shrink-0 group outline-none"
+                title="تغيير الصورة الشخصية"
+              >
+                {profile?.profileImageUrl ? (
+                  <img
+                    src={profile.profileImageUrl}
+                    alt={displayName}
+                    className="w-20 h-20 rounded-full object-cover"
+                  />
+                ) : (
+                  <div className="w-20 h-20 rounded-full bg-amber-700 text-white flex items-center justify-center text-2xl font-black">
+                    {displayName.trim().slice(0, 1)}
+                  </div>
+                )}
+                <div className="absolute inset-0 rounded-full bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                  {uploadImageMutation.isPending ? (
+                    <Loader2 className="w-5 h-5 text-white animate-spin" />
+                  ) : (
+                    <Camera className="w-5 h-5 text-white" />
+                  )}
+                </div>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleFileChange}
+                />
+              </button>
               <div>
                 <h2 className="text-xl font-black text-gray-900">{displayName}</h2>
                 {profile?.role && (
@@ -134,7 +182,7 @@ export default function ProfilePage() {
 
           <Link
             to="/preferences"
-            className="flex items-center gap-3 bg-white rounded-2xl border border-rose-100/80 shadow-sm p-4 hover:shadow-md transition-shadow sm:col-span-2"
+            className="flex items-center gap-3 bg-white rounded-2xl border border-rose-100/80 shadow-sm p-4 hover:shadow-md transition-shadow"
           >
             <div className="w-10 h-10 rounded-full bg-amber-50 text-amber-800 flex items-center justify-center">
               <Settings2 className="w-5 h-5" />
@@ -142,6 +190,19 @@ export default function ProfilePage() {
             <div>
               <div className="font-bold text-gray-900 text-sm">تفضيلاتك</div>
               <div className="text-xs text-gray-500">الأطباق والإشعارات ونطاق البحث</div>
+            </div>
+          </Link>
+
+          <Link
+            to="/change-password"
+            className="flex items-center gap-3 bg-white rounded-2xl border border-rose-100/80 shadow-sm p-4 hover:shadow-md transition-shadow"
+          >
+            <div className="w-10 h-10 rounded-full bg-amber-50 text-amber-800 flex items-center justify-center">
+              <KeyRound className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="font-bold text-gray-900 text-sm">تغيير كلمة المرور</div>
+              <div className="text-xs text-gray-500">حدّثي كلمة مرور حسابك</div>
             </div>
           </Link>
         </div>
