@@ -18,6 +18,7 @@ import {
   type OrderFulfillmentType,
 } from "../../services/api";
 import { saveOrder } from "../../services/orderHistory";
+import { extractPaymentUrl } from "../../services/payment";
 
 interface Address {
   id: string;
@@ -95,6 +96,16 @@ export default function CartPage() {
         rawResponse: response,
       });
       clearCart();
+
+      // لو السيرفر رجّع رابط دفع حقيقي (Paymob/Stripe)، لازم نوديه المستخدم
+      // يكمل الدفع فعليًا قبل ما نعتبر الطلب مؤكد. لو مفيش رابط دفع في الرد
+      // (الـ backend لسه مش راجعه)، بيفضل السلوك القديم: تأكيد فوري.
+      const paymentUrl = extractPaymentUrl(response);
+      if (paymentUrl) {
+        window.location.href = paymentUrl;
+        return;
+      }
+
       navigate(`/order-confirmation/${order.localId}`);
     },
     onError: (err: any) => {

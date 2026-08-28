@@ -39,6 +39,7 @@ const OrdersHistoryPage = lazy(() => import("../../features/orders/OrdersHistory
 const OrderTrackingPage = lazy(() => import("../../features/orders/OrderTrackingPage"));
 const CancelOrderPage = lazy(() => import("../../features/orders/CancelOrderPage"));
 const OrderConfirmationPage = lazy(() => import("../../features/orders/OrderConfirmationPage"));
+const PaymentCallbackPage = lazy(() => import("../../features/orders/PaymentCallbackPage"));
 
 
 
@@ -168,6 +169,14 @@ export const router = createBrowserRouter([
         element: (
           <Suspense fallback={<div>جاري التحميل...</div>}>
             <OrderConfirmationPage />
+          </Suspense>
+        ),
+      },
+      {
+        path: "/payment/callback",
+        element: (
+          <Suspense fallback={<div>جاري التحميل...</div>}>
+            <PaymentCallbackPage />
           </Suspense>
         ),
       },
