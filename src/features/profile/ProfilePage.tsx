@@ -14,7 +14,7 @@ import {
   Camera,
   Loader2,
 } from "lucide-react";
-import { getMyProfile, uploadProfileImage } from "../../services/api";
+import { getMyProfile, uploadProfileImage, deleteProfileImage } from "../../services/api";
 import { logout } from "../../services/auth";
 
 // شكل الرد لسه مش موثّق في الـ swagger (GET /api/v1/profile/me بيرجع "OK" بس من
@@ -57,11 +57,20 @@ export default function ProfilePage() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["my-profile"] }),
   });
 
+  const deleteImageMutation = useMutation({
+    mutationFn: deleteProfileImage,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["my-profile"] }),
+  });
+
   const handleAvatarClick = () => fileInputRef.current?.click();
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) uploadImageMutation.mutate(file);
     e.target.value = "";
+  };
+  const handleRemovePhoto = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    deleteImageMutation.mutate();
   };
 
   const handleLogout = async () => {
@@ -124,6 +133,17 @@ export default function ProfilePage() {
                   onChange={handleFileChange}
                 />
               </button>
+              {profile?.profileImageUrl && (
+                <button
+                  type="button"
+                  onClick={handleRemovePhoto}
+                  disabled={deleteImageMutation.isPending}
+                  title="حذف الصورة"
+                  className="text-[11px] text-gray-400 hover:text-red-500 -mr-2 self-start mt-1"
+                >
+                  إزالة
+                </button>
+              )}
               <div>
                 <h2 className="text-xl font-black text-gray-900">{displayName}</h2>
                 {profile?.role && (
