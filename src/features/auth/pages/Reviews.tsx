@@ -45,8 +45,15 @@ export default function ReviewsPage() {
     enabled: Boolean(id),
   });
 
-  const reviewsList: Review[] = reviewsRes?.data ?? [];
-  const avgRating =
+const reviewsList: Review[] = Array.isArray(reviewsRes?.data)
+  ? reviewsRes.data
+  : Array.isArray(reviewsRes?.data?.data)
+  ? reviewsRes.data.data
+  : Array.isArray(reviewsRes)
+  ? reviewsRes
+  : [];
+
+    const avgRating =
     ratingRes?.data?.average ??
     ratingRes?.data?.averageRating ??
     ratingRes?.data ??
@@ -136,7 +143,7 @@ export default function ReviewsPage() {
             </p>
           )}
 
-          {reviewsList.map((rev, idx) => (
+          {reviewsList?.map?.((rev, idx) => (
             <div
               key={rev.id ?? rev.reviewId ?? idx}
               className="bg-white p-4 rounded-2xl border border-rose-100/80 shadow-sm"
